@@ -14,3 +14,4 @@ hs_err_pid*
 # data 
 enwiki-20190820-pages-articles.xml
 enwiki-20190820-pages-articles.xml.bz2
+output/
