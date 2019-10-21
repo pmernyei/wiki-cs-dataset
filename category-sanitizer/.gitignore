@@ -11,7 +11,10 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 
-# data 
+# data
 enwiki-20190820-pages-articles.xml
 enwiki-20190820-pages-articles.xml.bz2
 output/
+
+# python env
+pyscripts/env
