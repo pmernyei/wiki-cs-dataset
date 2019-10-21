@@ -18,7 +18,7 @@ import org.slf4j.LoggerFactory;
 
 public class HittingDistanceMinimizer {
 	public static final Logger LOGGER = LoggerFactory.getLogger(HittingDistanceMinimizer.class);
-	
+
 	final ImmutableGraph transposed;
 	final int[] minMilestoneDistance;
 	final int[] closestMilestone;
@@ -26,7 +26,7 @@ public class HittingDistanceMinimizer {
 	final ObjectSet<Visitor> runningVisitors;
 	final IntPriorityQueue milestoneQueue;
 	final ProgressLogger pl;
-	
+
 	public HittingDistanceMinimizer(ImmutableGraph transposedGraph, IntSet milestones) {
 		this.transposed = transposedGraph;
 		this.milestones = milestones;
@@ -38,27 +38,27 @@ public class HittingDistanceMinimizer {
 		runningVisitors = new ObjectOpenHashSet<Visitor>();
 		pl  = new ProgressLogger(LOGGER, "milestones");
 		pl.expectedUpdates = milestones.size();
-		
+
 	}
-	
+
 	private class Visitor extends Thread {
-		
+
 		final int start;
 		final int[] dists;
 		final ImmutableGraph graph;
-		
+
 		Visitor(final ImmutableGraph graph, int startingNode) {
 			this.start = startingNode;
 			dists = new int[ graph.numNodes() ];
 			this.graph = graph.copy();
 		}
-		
+
 		@Override
 		public void run() {
 			final IntArrayFIFOQueue queue = new IntArrayFIFOQueue();
-			
+
 			Arrays.fill( dists, Integer.MAX_VALUE ); // Initially, all distances are infinity.
-			
+
 			int curr, succ;
 			queue.enqueue( start );
 			dists[ start ] = 0;
@@ -77,19 +77,19 @@ public class HittingDistanceMinimizer {
 					}
 				}
 			}
-			
+
 			startNewThreadAfter(this);
 		}
-		
+
 		@Override
 		public int hashCode() { return start; }
-		
+
 		@Override
 		public boolean equals(Object o) {
 			return (((o instanceof Visitor)) &&  ((Visitor) o).start == this.start);
 		}
 	}
-	
+
 	private synchronized void startNewThreadAfter(Visitor thread) {
 		if (thread != null) {
 			if (!runningVisitors.remove(thread)) {
@@ -99,35 +99,35 @@ public class HittingDistanceMinimizer {
 			updateClosestMilestonesAfter(thread.start, thread.dists);
 			pl.update();
 		}
-		
+
 		if (!milestoneQueue.isEmpty()) {
 			int milestone = milestoneQueue.dequeueInt();
 			Visitor visitor = new Visitor(transposed, milestone);
 			runningVisitors.add(visitor);
 			visitor.start();
-		} else 
+		} else
 			if (runningVisitors.isEmpty()) {
 				synchronized (this) {
 					this.notifyAll();
 				}
 			}
 	}
-	
+
 
 	private void updateClosestMilestonesAfter(int milestone, int[] distances) {
 		final int numNodes = transposed.numNodes();
 		for (int node = 0; node < numNodes; node++) {
-			if (distances[node] < minMilestoneDistance[node]) {
+			if (distances[node] < minMilestoneDistance[node] && node != milestone) {
 				minMilestoneDistance[node] = distances[node];
 				closestMilestone[node] = milestone;
 			}
 		}
 	}
-	
+
 	public int[] compute() {
 		return compute(Runtime.getRuntime().availableProcessors());
 	}
-	
+
 	public int[] compute(int nOfThreads) {
 		pl.start("Starting a BFS for each milestone (with " + nOfThreads + " parallel threads)...");
 		for (int i = 0; i < nOfThreads; i++) {
@@ -139,12 +139,12 @@ public class HittingDistanceMinimizer {
 					this.wait();
 			}
 		} catch (InterruptedException e) { throw new RuntimeException(e); }
-		
+
 		pl.done();
-		
+
 		return closestMilestone;
-		
+
 	}
 
-	
+
 }

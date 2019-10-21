@@ -31,18 +31,18 @@ import com.martiansoftware.jsap.UnflaggedOption;
 
 public class CategorySelector {
 	final static Logger LOGGER = LoggerFactory.getLogger(CategorySelector.class);
-	
+
 	// Input data
 	private final ImmutableGraph wcg, transposedWcg;
 	private final Int2ObjectMap<String> catId2name;
 	public final int numOriginalCat, numFinalCat;
 	public final String[] excludedStrings;
-	
+
 	// Output data
 	public int[] orderedCatIds;
 	private Int2DoubleMap catId2rank;
 	private IntSet milestones, excludedCatIds;
-	
+
 	public CategorySelector(ImmutableGraph wcg, Int2ObjectMap<String> catId2name, int numFinalCat, String[] excludedStrings) {
 		this.wcg = wcg;
 		this.transposedWcg = Transform.transpose(wcg);
@@ -50,7 +50,7 @@ public class CategorySelector {
 		this.numOriginalCat = wcg.numNodes();
 		this.numFinalCat = numFinalCat;
 		this.excludedStrings = excludedStrings;
-		
+
 		LOGGER.debug("Examples from the provided Wikipedia Category Graph: ");
 		for (int i = 0; i < 10; i++) {
 			int cat = (int) (Math.random() * numOriginalCat);
@@ -58,7 +58,7 @@ public class CategorySelector {
 					+ catId2name.get(this.wcg.successors(cat).nextInt()) + "\"");
 		}
 	}
-	
+
 	private static IntSet findCategoriesContainingStrings(final Int2ObjectMap<String> catId2name, final String[] lowercasedString) {
 		IntSet results = new IntOpenHashSet();
 		String name;
@@ -72,7 +72,7 @@ public class CategorySelector {
 		}
 		return results;
 	}
-	
+
 	public void compute() {
 		LOGGER.info("Ranking nodes...");
 		final GeometricCentralities ranker = new GeometricCentralities(transposedWcg, new ProgressLogger(LOGGER));
@@ -81,20 +81,25 @@ public class CategorySelector {
 		} catch (InterruptedException e) { throw new RuntimeException(e); }
 		catId2rank = new Int2DoubleOpenHashMap(Util.identity(numOriginalCat), ranker.harmonic);
 		LOGGER.info("Nodes ranked.");
-		
+
 		LOGGER.info("Excluding categories containing " + Arrays.toString(excludedStrings) + "...");
 		excludedCatIds = findCategoriesContainingStrings(catId2name, excludedStrings);
 		for (int catIdToExclude : excludedCatIds)
 			catId2rank.put(catIdToExclude, Double.NEGATIVE_INFINITY);
 		LOGGER.info(excludedCatIds.size() + " categories excluded, e.g. \"" + catId2name.get(excludedCatIds.toIntArray()[0]) + "\".");
-		
+
 		LOGGER.info("Ordering categories by centrality and selecting milestones...");
 		orderedCatIds = Util.identity(numOriginalCat);
 		IntArrays.quickSort(orderedCatIds, MapUtils.comparatorPuttingLargestMappedValueFirst(catId2rank));
 		milestones = new IntOpenHashSet(IntArrays.trim(orderedCatIds, numFinalCat));
 		LOGGER.info(milestones.size() + " milestones selected. 1st category: " + catId2name.get(orderedCatIds[0]));
 	}
-	
+
+	public void outputMilestoneHierarchy(final int[] closestMilestones) {
+		// TODO write to CSV
+		// Also consider writing some of the annoying .ser files to CSV instead?
+	}
+
 	public Int2ObjectMap<IntSet> recategorize(final Int2ObjectMap<IntSet> page2cat) {
 		LOGGER.info("Computing closest milestones...");
 		final int[] closestMilestones = new HittingDistanceMinimizer(transposedWcg, milestones).compute();
@@ -104,7 +109,8 @@ public class CategorySelector {
 			System.out.println( "\"" + catId2name.get(cat) + "\" has been ramapped to \""
 					+ catId2name.get(closestMilestones[cat]) + "\"");
 		}
-			
+		outputMilestoneHierarchy(closestMilestones);
+
 		ProgressLogger pl = new ProgressLogger(LOGGER, "pages");
 		pl.expectedUpdates = page2cat.size();
 		pl.start("Moving old categories to closest milestones...");
@@ -129,10 +135,10 @@ public class CategorySelector {
 			pl.lightUpdate();
 		}
 		pl.done();
-		
+
 		return page2newCat;
 	}
-	
+
 	private String[] toSortedNames(IntSet categories) {
 		String[] names = new String[categories.size()];
 		int[] sortedCat = categories.toIntArray();
@@ -140,56 +146,56 @@ public class CategorySelector {
 		for (int i = 0; i < sortedCat.length; i++) names[i] = catId2name.get(sortedCat[i]);
 		return names;
 	}
-	
+
 	@SuppressWarnings({ "unchecked" })
 	public static void main( String rawArguments[] ) throws Exception  {
-		SimpleJSAP jsap = new SimpleJSAP( CategorySelector.class.getName(), 
+		SimpleJSAP jsap = new SimpleJSAP( CategorySelector.class.getName(),
 				"Cleanse the wikipedia categorization system.",
 				new Parameter[] {
-						new UnflaggedOption( "WCG", 
+						new UnflaggedOption( "WCG",
 							JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, JSAP.NOT_GREEDY,
-							"The BVGraph basename of the wikipedia category graph." ),	
-						new UnflaggedOption( "page2cat", 
+							"The BVGraph basename of the wikipedia category graph." ),
+						new UnflaggedOption( "page2cat",
 								JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, JSAP.NOT_GREEDY,
-								"The serialized int 2 intset that represents set of categories for each page." ),	
-						new UnflaggedOption( "pageNames", 
+								"The serialized int 2 intset that represents set of categories for each page." ),
+						new UnflaggedOption( "pageNames",
 								JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, JSAP.NOT_GREEDY,
 								"The serialized Int2ObjectMap<String> file with association of categories to their names." ),
-						new UnflaggedOption( "catNames", 
+						new UnflaggedOption( "catNames",
 								JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, JSAP.NOT_GREEDY,
-								"The serialized Int2ObjectMap<String> file with association of categories to their names." ),		
-						new FlaggedOption( "exclude", 
-								JSAP.STRING_PARSER, null, JSAP.NOT_REQUIRED, 
-								'e', "exclude", 
+								"The serialized Int2ObjectMap<String> file with association of categories to their names." ),
+						new FlaggedOption( "exclude",
+								JSAP.STRING_PARSER, null, JSAP.NOT_REQUIRED,
+								'e', "exclude",
 								"Exclude all those categories whose LOWERCASED name contains one of the provided strings." )
 								.setAllowMultipleDeclarations(true),
-						new UnflaggedOption( "C", 
+						new UnflaggedOption( "C",
 								JSAP.INTEGER_PARSER, "10000", JSAP.REQUIRED, JSAP.NOT_GREEDY,
-								"Number of categories to retain." ),	
+								"Number of categories to retain." ),
 						new UnflaggedOption( "output-rankedcat",
-								JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, JSAP.NOT_GREEDY, 
+								JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, JSAP.NOT_GREEDY,
 								"Where the output (ordered) category 2 score TSV file will be saved."
 								),
 						new UnflaggedOption( "output-page2cat",
-								JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, JSAP.NOT_GREEDY, 
+								JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, JSAP.NOT_GREEDY,
 								"Where the output page2cat TSV file will be saved."
 								),
 					}
 				);
-				
+
 		final JSAPResult args = jsap.parse( rawArguments );
 		if ( jsap.messagePrinted() ) System.exit( 1 );
-		
+
 		LOGGER.info("Reading input files...");
 		Int2ObjectMap<String> catNames = (Int2ObjectMap<String>) BinIO.loadObject(args.getString("catNames"));
 		Int2ObjectMap<String> pageNames = (Int2ObjectMap<String>) BinIO.loadObject(args.getString("pageNames"));
 		Int2ObjectMap<IntSet> page2cat = (Int2ObjectMap<IntSet>) BinIO.loadObject(args.getString("page2cat"));
 		ImmutableGraph wcg = ImmutableGraph.load(args.getString("WCG"));
 		final int numFinalCat = args.getInt("C");
-		
+
 		CategorySelector categorySelector = new CategorySelector(wcg, catNames, numFinalCat, args.getStringArray("exclude"));
 		categorySelector.compute();
-		
+
 		LOGGER.info("Writing rankings to " + args.getString("output-rankedcat") + "...");
 		PrintWriter out = new PrintWriter(args.getString("output-rankedcat"));
 		for (int c : categorySelector.orderedCatIds) {
@@ -199,10 +205,10 @@ public class CategorySelector {
 			out.println();
 		}
 		out.close();
-		
-		
+
+
 		Int2ObjectMap<IntSet> newPage2cat = categorySelector.recategorize(page2cat);
-		
+
 		out = new PrintWriter(args.getString("output-page2cat"));
 		ProgressLogger pl = new ProgressLogger(LOGGER, "pages");
 		pl.expectedUpdates = newPage2cat.size();
@@ -218,8 +224,8 @@ public class CategorySelector {
 		out.close();
 
 	}
-	
-	
-	
+
+
+
 
 }
