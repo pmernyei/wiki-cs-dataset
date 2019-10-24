@@ -15,6 +15,7 @@ import it.unimi.dsi.webgraph.ImmutableGraph;
 import it.unimi.dsi.webgraph.Transform;
 import it.unimi.dsi.webgraph.algo.GeometricCentralities;
 
+import java.io.IOException;
 import java.io.PrintWriter;
 
 import org.slf4j.Logger;
@@ -43,13 +44,16 @@ public class CategorySelector {
 	private Int2DoubleMap catId2rank;
 	private IntSet milestones, excludedCatIds;
 
-	public CategorySelector(ImmutableGraph wcg, Int2ObjectMap<String> catId2name, int numFinalCat, String[] excludedStrings) {
+	private String milestoneTreeFile;
+
+	public CategorySelector(ImmutableGraph wcg, Int2ObjectMap<String> catId2name, int numFinalCat, String[] excludedStrings, String milestoneTreeFile) {
 		this.wcg = wcg;
 		this.transposedWcg = Transform.transpose(wcg);
 		this.catId2name = catId2name;
 		this.numOriginalCat = wcg.numNodes();
 		this.numFinalCat = numFinalCat;
 		this.excludedStrings = excludedStrings;
+		this.milestoneTreeFile = milestoneTreeFile;
 
 		LOGGER.debug("Examples from the provided Wikipedia Category Graph: ");
 		for (int i = 0; i < 10; i++) {
@@ -96,8 +100,19 @@ public class CategorySelector {
 	}
 
 	public void outputMilestoneHierarchy(final int[] closestMilestones) {
-		// TODO write to CSV
-		// Also consider writing some of the annoying .ser files to CSV instead?
+		try {
+			PrintWriter printWriter = new PrintWriter(milestoneTreeFile);
+			for (int m : milestones) {
+				printWriter.print(catId2name.get(m));
+				printWriter.print("\t");
+				printWriter.print(catId2name.get(closestMilestones[m]));
+				printWriter.println();
+			}
+			printWriter.close();
+		} catch (IOException e) {
+			LOGGER.error("Failed to output milestone tree data!");
+		}
+
 	}
 
 	public Int2ObjectMap<IntSet> recategorize(final Int2ObjectMap<IntSet> page2cat) {
@@ -110,6 +125,9 @@ public class CategorySelector {
 					+ catId2name.get(closestMilestones[cat]) + "\"");
 		}
 		outputMilestoneHierarchy(closestMilestones);
+		for (int milestone : milestones) {
+			closestMilestones[milestone] = milestone;
+		}
 
 		ProgressLogger pl = new ProgressLogger(LOGGER, "pages");
 		pl.expectedUpdates = page2cat.size();
@@ -180,6 +198,10 @@ public class CategorySelector {
 								JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, JSAP.NOT_GREEDY,
 								"Where the output page2cat TSV file will be saved."
 								),
+						new UnflaggedOption( "output-milestonetree",
+								JSAP.STRING_PARSER, JSAP.NO_DEFAULT, JSAP.REQUIRED, JSAP.NOT_GREEDY,
+								"Where the output milestone tree TSV file will be saved."
+								),
 					}
 				);
 
@@ -193,7 +215,8 @@ public class CategorySelector {
 		ImmutableGraph wcg = ImmutableGraph.load(args.getString("WCG"));
 		final int numFinalCat = args.getInt("C");
 
-		CategorySelector categorySelector = new CategorySelector(wcg, catNames, numFinalCat, args.getStringArray("exclude"));
+		CategorySelector categorySelector = new CategorySelector(
+			wcg, catNames, numFinalCat, args.getStringArray("exclude"), args.getString("output-milestonetree"));
 		categorySelector.compute();
 
 		LOGGER.info("Writing rankings to " + args.getString("output-rankedcat") + "...");
