@@ -1,3 +1,7 @@
+# large input/output data files
 data/
-# python env
+
+# python scripts
 pyscripts/env
+pyscripts/tmp
+pyscripts/__pycache__
