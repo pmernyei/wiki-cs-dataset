@@ -1,5 +1,5 @@
 JAR=wikicategories
-sourcedir=$(cd $(dirname $0) && pwd) 
+sourcedir=$(pwd)
 count=$(\ls -1 $sourcedir/$JAR-*.jar 2>/dev/null | wc -l)
 echo $sourcedir
 if (( count == 0 )); then
@@ -11,5 +11,3 @@ else
 fi
 
 export CLASSPATH=$CLASSPATH:$(\ls -1 $sourcedir/jars/runtime/*.jar | paste -d: -s -)
-
-echo $CLASSPATH

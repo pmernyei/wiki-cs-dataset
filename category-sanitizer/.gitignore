@@ -16,5 +16,4 @@ enwiki-20190820-pages-articles.xml
 enwiki-20190820-pages-articles.xml.bz2
 output/
 
-# python env
-pyscripts/env
+
