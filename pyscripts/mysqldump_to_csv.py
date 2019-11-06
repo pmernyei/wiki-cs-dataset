@@ -55,7 +55,7 @@ def parse_values(values, outfile):
         for column in reader_row:
             # If our current string is empty...
             if len(column) == 0 or column == 'NULL':
-                latest_row.append(chr(0))
+                latest_row.append('NULL')
                 continue
             # If our string starts with an open paren
             if column[0] == "(":
@@ -104,7 +104,7 @@ def main():
             if is_insert(line):
                 values = get_values(line)
                 if values_sanity_check(values):
-                    parse_values(values, open(sys.argv[2], 'a+', encoding='utf-8'))
+                    parse_values(values, open(sys.argv[2], 'a+', encoding='utf-8', newline=''))
     except KeyboardInterrupt:
         sys.exit(0)
 
