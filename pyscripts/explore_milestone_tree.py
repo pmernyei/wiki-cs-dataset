@@ -87,6 +87,11 @@ def calculate_milestone_tree(subcats_filename, sizes_filename=None, page2cat_fil
         open(out_filename, 'w+', encoding='utf8').write(json.dumps(result))
     return result
 
+def get_all_descendants(root, children_map):
+    return {root}.union(
+        *[get_all_descendants(child, children_map) for child in children_map.get(root, [])]
+    )
+
 
 if __name__ == '__main__':
     calculate_milestone_tree(sys.argv[1], page2cat_filename=sys.argv[2], out_filename=sys.argv[3])
