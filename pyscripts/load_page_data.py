@@ -2,6 +2,10 @@ import csv
 import os
 import json
 import nltk
+import string
+import pickle
+from datetime import datetime
+from wiki_node import WikiDataNode
 
 try:
     nltk.data.find('tokenizers/punkt')
@@ -113,38 +117,38 @@ def get_text_tokens(page_id_set, text_extractor_data_dir):
                 entry = json.loads(line)
                 id = int(entry['id'])
                 if id in page_id_set:
-                    ids_to_tokens[id] = nltk.word_tokenize(entry['text'])
+                    ids_to_tokens[id] = [t for t in nltk.word_tokenize(entry['text']) \
+                                            if t not in string.punctuation]
     return ids_to_tokens
 
 
-class Node:
-    def __init__(self, id, labels, title, outlinks, tokens):
-        self.id = id
-        self.title = title
-        self.outlinks = outlinks
-        self.tokens = tokens
-        self.labels = labels
-
-
-def load_with_multiple_label_maps(label_mapping_list, page2cat_filename, page_table_filename, pagelinks_table_filename, redirect_table_filename, text_extractor_data):
+def load_with_multiple_label_maps(label_mapping_list, page2cat_filename, page_table_filename, \
+                                pagelinks_table_filename, redirect_table_filename, \
+                                text_extractor_data, output_dir=None):
     # Get titles to mapped to labels for each label dataset
+    print(datetime.now().strftime('%H:%M:%S'), 'Loading page titles for labels...')
     multi_titles_to_labels = [page_titles_to_labels(label_mapping, page2cat_filename) \
                                 for label_mapping in label_mapping_list]
     # Get titles and map them to page IDs
+    print(datetime.now().strftime('%H:%M:%S'), 'Mapping titles to page IDs...')
     all_titles = set([]).union(*[titles_to_labels.keys() for titles_to_labels in multi_titles_to_labels])
     all_titles_to_ids = page_titles_to_ids(all_titles, page_table_filename)
     all_ids_to_titles = {v:k for (k,v) in all_titles_to_ids.items()}
     all_ids = set(all_titles_to_ids.values())
 
     # Load link and text data
+    print(datetime.now().strftime('%H:%M:%S'), 'Loading links between pages...')
     all_links = links_between_pages(all_ids, pagelinks_table_filename, page_table_filename, redirect_table_filename)
+
+    print(datetime.now().strftime('%H:%M:%S'), 'Loading and tokenizing text...')
     all_ids_to_tokens = get_text_tokens(all_ids, text_extractor_data)
 
+    # Get ID sets of valid pages with no data missing for each individual dataset
+    print(datetime.now().strftime('%H:%M:%S'), 'Filtering IDs...')
     all_valid_links = {source: [target for target in outlinks \
                                 if (target in all_links and target in all_ids_to_tokens)] \
                         for (source, outlinks) in all_links.items()}
 
-    # Get ID sets of valid pages with no data missing for each individual dataset
     id_sets = [{all_titles_to_ids[title] for title in titles_to_labels.keys() \
                     if (title in all_titles_to_ids \
                     and all_titles_to_ids[title] in all_valid_links \
@@ -152,11 +156,19 @@ def load_with_multiple_label_maps(label_mapping_list, page2cat_filename, page_ta
                 for titles_to_labels in multi_titles_to_labels]
 
     # Create datasets as a list of sets of Node objects
+    print(datetime.now().strftime('%H:%M:%S'), 'Creating final sets...')
     result = [{ \
-        id: Node(id, all_ids_to_titles[id], multi_titles_to_labels[i][all_ids_to_titles[id]], \
+        id: WikiDataNode(id, all_ids_to_titles[id], multi_titles_to_labels[i][all_ids_to_titles[id]], \
                  [out_id for out_id in all_valid_links[id] if out_id in id_sets[i]], all_ids_to_tokens[id]) \
         for id in id_sets[i] \
     } for i in range(len(id_sets))]
+    print(datetime.now().strftime('%H:%M:%S'), 'Created datasets.')
+    if output_dir is not None:
+        print(datetime.now().strftime('%H:%M:%S'), 'Writing to file...')
+        for i in range(len(result)):
+            print(datetime.now().strftime('%H:%M:%S'), 'Writing dataset', i, '...')
+            with open(os.path.join(output_dir, 'ds_'+str(i)), 'wb') as output:
+                pickle.dump(result[i], output, -1)
     return result
 
 
