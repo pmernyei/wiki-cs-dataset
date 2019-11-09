@@ -93,5 +93,18 @@ def get_all_descendants(root, children_map):
     )
 
 
+def print_tree(root, milestone_tree, output=sys.stdout, indent_level=0):
+    indent = '    ' * indent_level
+    output.write(indent + '{} ({} pages, ~{} in subtree)'.format(
+        root, milestone_tree['raw_sizes'].get(root, 0),
+        milestone_tree['aggregated_sizes'].get(root, 0)))
+    if root in milestone_tree['children']:
+        output.write(' {\n')
+        for ch in milestone_tree['children'].get(root, []):
+            print_tree(ch, milestone_tree, output, indent_level+1)
+        output.write(indent + '}\n')
+    else:
+        output.write('\n')
+
 if __name__ == '__main__':
     calculate_milestone_tree(sys.argv[1], page2cat_filename=sys.argv[2], out_filename=sys.argv[3])
