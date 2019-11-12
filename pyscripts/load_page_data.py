@@ -124,7 +124,7 @@ def get_text_tokens(page_id_set, text_extractor_data_dir):
 
 def load_with_multiple_label_maps(label_mapping_list, page2cat_filename, page_table_filename, \
                                 pagelinks_table_filename, redirect_table_filename, \
-                                text_extractor_data, output_dir=None):
+                                text_extractor_data, output_dir=None, output_names=None):
     # Get titles to mapped to labels for each label dataset
     print(datetime.now().strftime('%H:%M:%S'), 'Loading page titles for labels...')
     multi_titles_to_labels = [page_titles_to_labels(label_mapping, page2cat_filename) \
@@ -164,13 +164,30 @@ def load_with_multiple_label_maps(label_mapping_list, page2cat_filename, page_ta
     } for i in range(len(id_sets))]
     print(datetime.now().strftime('%H:%M:%S'), 'Created datasets.')
     if output_dir is not None:
+        if output_names is not None:
+            for name in output_names:
+                os.mkdir(os.path.join(output_dir, name))
         print(datetime.now().strftime('%H:%M:%S'), 'Writing to file...')
         for i in range(len(result)):
             print(datetime.now().strftime('%H:%M:%S'), 'Writing dataset', i, '...')
-            with open(os.path.join(output_dir, 'ds_'+str(i)), 'wb') as output:
+            out_filename = os.path.join(output_dir, 'ds_'+str(i)) \
+                if output_names is None \
+                else os.path.join(output_dir, output_names[i], 'data')
+            with open(out_filename, 'wb') as output:
                 pickle.dump(result[i], output, -1)
     return result
 
 
 def load_single_dataset(label_mapping, page2cat_filename, page_table_filename, pagelinks_table_filename, redirect_table_filename, text_extractor_data):
     return load_with_multiple_label_maps([label_mapping], page2cat_filename, page_table_filename, pagelinks_table_filename, redirect_table_filename, text_extractor_data)
+
+def load_mappings_by_file(mappings_filename, page2cat_filename, page_table_filename, \
+                                pagelinks_table_filename, redirect_table_filename, \
+                                text_extractor_data, output_dir):
+    with open(mappings_filename, 'r') as file:
+        mappings = json.load(file)
+        names = list(mappings.keys())
+        mapping_list = [mappings[name] for name in names]
+    load_with_multiple_label_maps(mapping_list, page2cat_filename, page_table_filename, \
+                                    pagelinks_table_filename, redirect_table_filename, \
+                                    text_extractor_data, output_dir, names)

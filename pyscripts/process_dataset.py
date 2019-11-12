@@ -1,11 +1,16 @@
+import numpy as np
+
+def label_set(nodes):
+    return set().union(*[set(n.labels) for n in nodes.values()])
+
 def get_significant_words(nodes, multiplier = 2.0, min_occurrences = 100):
-    labels = set().union(*[set(n.labels) for n in nodes.values()])
+    labels = label_set(nodes)
     labels.add('ALL')
     total_tokens = {label: 0 for label in labels}
     word_counts = {label: {} for label in labels}
     for node in nodes.values():
-        labels = node.labels.union({'ALL'})
-        for label in labels:
+        node_labels = node.labels.union({'ALL'})
+        for label in node_labels:
             total_tokens[label] += len(node.tokens)
             for token in node.tokens:
                 word_counts[label][token] = word_counts[label].get(token, 0) + 1
