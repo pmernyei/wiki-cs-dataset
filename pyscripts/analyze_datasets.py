@@ -1,9 +1,15 @@
 from wiki_node import WikiDataNode
 from itertools import product
+from datetime import datetime
 import numpy as np
 import random
+import pickle
+import os
+import json
+
 import process_dataset
-from datetime import datetime
+
+
 
 
 def calculate_connectivity_stats(nodes, label_list):
@@ -132,13 +138,36 @@ def full_analysis(nodes):
 def print_node_data(node, all_nodes_map):
     print('Title:', node.title, '; id:', node.id)
     print('Labels:', node.labels)
-    print('Text:', node.tokens[:10], '...')
+    print('Text:', ' '.join(node.tokens[:20])+'...')
     print('Linked pages:', [all_nodes_map[id].title for id in node.outlinks][:5], 'total', len(node.outlinks))
     print()
 
 
 def print_sample_pages(nodes, sample_count=5):
-    nodes_list = list(nodes.values())
-    samples = random.sample(nodes_list, sample_count)
+    samples = random.sample(nodes.values(), sample_count)
     for sample in samples:
         print_node_data(sample, nodes)
+
+def sample_and_validate(dataset_dir, sample_count=20):
+    nodes = pickle.load(open(os.path.join(dataset_dir, 'data'), 'rb'))
+    labels = process_dataset.label_set(nodes)
+    nodes_for_labels = {lab:[] for lab in labels}
+    verdicts = {}
+    for node in nodes.values():
+        if len(node.labels) > 1:
+            continue
+        for lab in node.labels:
+            nodes_for_labels[lab].append(node)
+    for lab in labels:
+        sample = random.sample(nodes_for_labels[lab], sample_count)
+        sample_verdicts = {}
+        print('Listing sample for label', lab)
+        print()
+        for node in sample:
+            print_node_data(node, nodes)
+            sample_verdicts[node.title] = input('Any problems? ')
+        verdicts[lab] = sample_verdicts
+        print('Finished label', lab)
+        print()
+    json.dump(verdicts, open(os.path.join(dataset_dir, 'sample_manual_check.txt'), 'wb'), indent=2)
+    return verdicts
