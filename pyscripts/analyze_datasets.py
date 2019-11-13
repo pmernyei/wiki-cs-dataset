@@ -169,5 +169,5 @@ def sample_and_validate(dataset_dir, sample_count=20):
         verdicts[lab] = sample_verdicts
         print('Finished label', lab)
         print()
-    json.dump(verdicts, open(os.path.join(dataset_dir, 'sample_manual_check.txt'), 'wb'), indent=2)
+    json.dump(verdicts, open(os.path.join(dataset_dir, 'sample_manual_check.txt'), 'w'), indent=2)
     return verdicts
