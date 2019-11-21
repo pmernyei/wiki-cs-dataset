@@ -33,14 +33,20 @@ def dataset_word_frequencies(nodes):
             freqs[t.lower()] = freqs.get(t.lower(), 0) + 1
     return freqs
 
-def plot_frequencies(freqs, words):
+def plot_frequencies(freqs, words, title=None):
     ys = np.array([freqs[w] for w in words])
 
     fig, ax = plt.subplots()
     index = np.arange(len(words))
     rects1 = plt.bar(index, ys, 0.8)
 
+    if title is not None:
+        plt.title(title)
     plt.yscale('log')
     plt.xticks(index, words, rotation=60, ha='right')
     plt.tight_layout()
     plt.show()
+
+def desc_frequency_list(freqs):
+    l = sorted(freqs.items(), reverse=True, key=lambda x: x[1])
+    return [w for (w,c) in l]
