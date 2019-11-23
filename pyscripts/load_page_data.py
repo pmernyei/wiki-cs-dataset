@@ -4,13 +4,17 @@ import json
 import nltk
 import string
 import pickle
+import sys
 from datetime import datetime
 from wiki_node import WikiDataNode
+from nltk.corpus import stopwords
 
 try:
     nltk.data.find('tokenizers/punkt')
+    nltk.data.find('corpora/stopwords')
 except LookupError:
     nltk.download('punkt')
+    nktk.download('stopwords')
 
 def page_titles_to_ids(titles_set, page_table_filename):
     mapping = {}
@@ -40,8 +44,8 @@ def page_titles_to_labels(category_label_mapping, page2cat_filename):
                         for i in range(1, len(line)) \
                         if line[i] in category_to_label]
             labels = {label for one_list in label_lists for label in one_list}
-            if len(labels) > 0:
-                titles_to_labels[title] = labels
+            if len(labels) == 1:
+                titles_to_labels[title] = next(iter(labels))
 
     return titles_to_labels
 
@@ -111,19 +115,20 @@ def filter_for_main_namespace(input_filename, output_filename, field_indices):
 
 def get_text_tokens(page_id_set, text_extractor_data_dir):
     ids_to_tokens = {}
+    sw = stopwords.words('english')+['""', "''", '``', "'s"]
     for root, dirs, files in os.walk(text_extractor_data_dir):
         for file in files:
             for line in open(os.path.join(root, file), "r", encoding='utf8'):
                 entry = json.loads(line)
                 id = int(entry['id'])
                 if id in page_id_set:
-                    ids_to_tokens[id] = [t for t in nltk.word_tokenize(entry['text']) \
-                                            if t not in string.punctuation]
+                    ids_to_tokens[id] = [t.lower() for t in nltk.word_tokenize(entry['text']) \
+                                            if t not in string.punctuation and t not in sw]
     return ids_to_tokens
 
 
-def load_with_multiple_label_maps(label_mapping_list, page2cat_filename, page_table_filename, \
-                                pagelinks_table_filename, redirect_table_filename, \
+def load_with_multiple_label_maps(label_mapping_list, page2cat_filename, page_table_filename,
+                                pagelinks_table_filename, redirect_table_filename,
                                 text_extractor_data, output_dir=None, output_names=None):
     # Get titles to mapped to labels for each label dataset
     print(datetime.now().strftime('%H:%M:%S'), 'Loading page titles for labels...')
@@ -181,13 +186,22 @@ def load_with_multiple_label_maps(label_mapping_list, page2cat_filename, page_ta
 def load_single_dataset(label_mapping, page2cat_filename, page_table_filename, pagelinks_table_filename, redirect_table_filename, text_extractor_data):
     return load_with_multiple_label_maps([label_mapping], page2cat_filename, page_table_filename, pagelinks_table_filename, redirect_table_filename, text_extractor_data)
 
-def load_mappings_by_file(mappings_filename, page2cat_filename, page_table_filename, \
-                                pagelinks_table_filename, redirect_table_filename, \
+def load_mappings_by_file(mappings_filename, page2cat_filename, page_table_filename,
+                                pagelinks_table_filename, redirect_table_filename,
                                 text_extractor_data, output_dir):
     with open(mappings_filename, 'r') as file:
         mappings = json.load(file)
         names = list(mappings.keys())
         mapping_list = [mappings[name] for name in names]
-    load_with_multiple_label_maps(mapping_list, page2cat_filename, page_table_filename, \
-                                    pagelinks_table_filename, redirect_table_filename, \
+    load_with_multiple_label_maps(mapping_list, page2cat_filename, page_table_filename,
+                                    pagelinks_table_filename, redirect_table_filename,
                                     text_extractor_data, output_dir, names)
+
+if __name__ == '__main__':
+    load_mappings_by_file(sys.argv[1],
+        os.path.join(sys.argv[2], 'category-outputs', 'page2cat.tsv'),
+        os.path.join(sys.argv[2], 'input-dumps', 'page.csv'),
+        os.path.join(sys.argv[2], 'input-dumps', 'pagelinks.csv'),
+        os.path.join(sys.argv[2], 'input-dumps', 'redirect.csv'),
+        os.path.join(sys.argv[2], 'text-extraction'),
+        sys.argv[3])
