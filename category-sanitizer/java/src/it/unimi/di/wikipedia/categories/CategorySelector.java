@@ -30,6 +30,10 @@ import com.martiansoftware.jsap.Parameter;
 import com.martiansoftware.jsap.SimpleJSAP;
 import com.martiansoftware.jsap.UnflaggedOption;
 
+import it.unimi.dsi.fastutil.ints.IntArrayPriorityQueue;
+import it.unimi.dsi.fastutil.ints.IntPriorityQueue;
+
+
 public class CategorySelector {
 	final static Logger LOGGER = LoggerFactory.getLogger(CategorySelector.class);
 
@@ -38,6 +42,7 @@ public class CategorySelector {
 	private final Int2ObjectMap<String> catId2name;
 	public final int numOriginalCat, numFinalCat;
 	public final String[] excludedStrings;
+	public final String[] prunedStrings;
 
 	// Output data
 	public int[] orderedCatIds;
@@ -46,13 +51,14 @@ public class CategorySelector {
 
 	private String milestoneTreeFile;
 
-	public CategorySelector(ImmutableGraph wcg, Int2ObjectMap<String> catId2name, int numFinalCat, String[] excludedStrings, String milestoneTreeFile) {
+	public CategorySelector(ImmutableGraph wcg, Int2ObjectMap<String> catId2name, int numFinalCat, String[] excludedStrings, String[] prunedStrings, String milestoneTreeFile) {
 		this.wcg = wcg;
 		this.transposedWcg = Transform.transpose(wcg);
 		this.catId2name = catId2name;
 		this.numOriginalCat = wcg.numNodes();
 		this.numFinalCat = numFinalCat;
 		this.excludedStrings = excludedStrings;
+		this.prunedStrings = prunedStrings;
 		this.milestoneTreeFile = milestoneTreeFile;
 
 		LOGGER.debug("Examples from the provided Wikipedia Category Graph: ");
@@ -116,8 +122,14 @@ public class CategorySelector {
 	}
 
 	public Int2ObjectMap<IntSet> recategorize(final Int2ObjectMap<IntSet> page2cat) {
+		LOGGER.info("Pruning categories from aggregation containing " + Arrays.toString(prunedStrings) + "...");
+		IntSet prunedCategoryIds = findCategoriesContainingStrings(catId2name, prunedStrings);
+		for (int id : prunedCategoryIds) {
+			LOGGER.info("Pruning category " + catId2name.get(id));
+		}
 		LOGGER.info("Computing closest milestones...");
-		final int[] closestMilestones = new HittingDistanceMinimizer(transposedWcg, milestones).compute();
+		final int[] closestMilestones = new ImprovedHittingDistanceMinimizer(
+			transposedWcg, milestones, prunedCategoryIds).compute();
 		LOGGER.info("Closest milestones computed, printing a sample:");
 		for (int i = 0; i < 10; i++) {
 			int cat = (int) (Math.random() * numOriginalCat);
@@ -125,6 +137,8 @@ public class CategorySelector {
 					+ catId2name.get(closestMilestones[cat]) + "\"");
 		}
 		outputMilestoneHierarchy(closestMilestones);
+		// Milestones had to point to others for outputting their connections,
+		// but for the purpose of page remapping they should point to themselves
 		for (int milestone : milestones) {
 			closestMilestones[milestone] = milestone;
 		}
@@ -187,6 +201,11 @@ public class CategorySelector {
 								'e', "exclude",
 								"Exclude all those categories whose LOWERCASED name contains one of the provided strings." )
 								.setAllowMultipleDeclarations(true),
+						new FlaggedOption( "prune",
+								JSAP.STRING_PARSER, null, JSAP.NOT_REQUIRED,
+								'p', "prune",
+								"Exclude all those categories whose LOWERCASED name contains one of the provided strings." )
+								.setAllowMultipleDeclarations(true),
 						new UnflaggedOption( "C",
 								JSAP.INTEGER_PARSER, "10000", JSAP.REQUIRED, JSAP.NOT_GREEDY,
 								"Number of categories to retain." ),
@@ -216,7 +235,8 @@ public class CategorySelector {
 		final int numFinalCat = args.getInt("C");
 
 		CategorySelector categorySelector = new CategorySelector(
-			wcg, catNames, numFinalCat, args.getStringArray("exclude"), args.getString("output-milestonetree"));
+			wcg, catNames, numFinalCat, args.getStringArray("exclude"),
+			args.getStringArray("prune"), args.getString("output-milestonetree"));
 		categorySelector.compute();
 
 		LOGGER.info("Writing rankings to " + args.getString("output-rankedcat") + "...");

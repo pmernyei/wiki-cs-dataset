@@ -5,7 +5,8 @@ N_TOP_CATEGORIES=10000
 
 # java -Xmx6G it.unimi.di.wikipedia.parsing.WikipediaCategoryProducer $WIKIDUMP_XML ../data/10-12/category_outputs/
 
-java -Xmx6G it.unimi.di.wikipedia.categories.CategorySelector ../data/category_outputs/10-12/categoryPseudotree \
-  output/page2cat.ser ../data/category_outputs/10-12/pageId2Name.ser ../data/category_outputs/10-12/catId2Name.ser \
+java -Xmx6G it.unimi.di.wikipedia.categories.CategorySelector ../data/category-outputs/categoryPseudotree \
+  ../data/category-outputs/page2cat.ser ../data/category-outputs/pageId2Name.ser ../data/category-outputs/catId2Name.ser \
   -e "wiki" -e "categories" -e "main topic classifications" -e "template" -e "navigational box" \
-  $N_TOP_CATEGORIES ../data/category_outputs/10-26/ranked-categories.tsv ../data/category_outputs/10-26/page2cat.tsv ../data/category_outputs/10-26/milestonetree.tsv
+  -p "msx" -p "x86 operating systems" -p "ship registration" -p "browsers" -p "cloud applications" -p "cloud computing providers" \
+  $N_TOP_CATEGORIES ../data/category-outputs/improved-rerun/ranked-categories.tsv ../data/category-outputs/improved-rerun/page2cat.tsv ../data/category-outputs/improved-rerun/milestonetree.tsv
