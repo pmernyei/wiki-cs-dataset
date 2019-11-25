@@ -4,4 +4,4 @@ data/
 # python scripts
 pyscripts/env
 pyscripts/tmp
-pyscripts/__pycache__
+__pycache__/
