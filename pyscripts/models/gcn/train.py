@@ -1,5 +1,7 @@
 import argparse, time
 import numpy as np
+import json
+import itertools
 import networkx as nx
 import torch
 import torch.nn as nn
@@ -8,8 +10,6 @@ from dgl import DGLGraph
 from dgl.data import register_data_args, load_data
 
 from gcn import GCN
-#from gcn_mp import GCN
-#from gcn_spmv import GCN
 
 def evaluate(model, features, labels, mask):
     model.eval()
@@ -21,8 +21,36 @@ def evaluate(model, features, labels, mask):
         correct = torch.sum(indices == labels)
         return correct.item() * 1.0 / len(labels)
 
-def main(args):
-    # load and preprocess dataset
+
+def load_dataset_from_file(filename):
+    data = json.load(open(filename))
+    features = torch.FloatTensor(np.array(data['features']))
+    labels = torch.LongTensor(np.array(data['labels']))
+    if hasattr(torch, 'BoolTensor'):
+        train_mask = torch.BoolTensor(np.array(data['splits']) == 0)
+        val_mask = torch.BoolTensor(np.array(data['splits']) == 1)
+        test_mask = torch.BoolTensor(np.array(data['splits']) == 2)
+    else:
+        train_mask = torch.ByteTensor(np.array(data['splits']) == 0)
+        val_mask = torch.ByteTensor(np.array(data['splits']) == 1)
+        test_mask = torch.ByteTensor(np.array(data['splits']) == 2)
+    n_feats = features.shape[1]
+    n_classes = len(set(data['labels']))
+
+    g = DGLGraph()
+    g.add_nodes(len(data['features']))
+    edge_list = list(itertools.chain(*[[(i, nb) for nb in nbs] for i,nbs in enumerate(data['links'])]))
+    n_edges = len(edge_list)
+    # add edges two lists of nodes: src and dst
+    src, dst = tuple(zip(*edge_list))
+    g.add_edges(src, dst)
+    # edges are directional in DGL; make them bi-directional
+    g.add_edges(dst, src)
+    return (g, features, labels, train_mask, val_mask,
+            test_mask, n_edges, n_classes, n_feats)
+
+
+def load_builtin_dataset(name):
     data = load_data(args)
     features = torch.FloatTensor(data.features)
     labels = torch.LongTensor(data.labels)
@@ -34,9 +62,28 @@ def main(args):
         train_mask = torch.ByteTensor(data.train_mask)
         val_mask = torch.ByteTensor(data.val_mask)
         test_mask = torch.ByteTensor(data.test_mask)
-    in_feats = features.shape[1]
+    n_feats = features.shape[1]
     n_classes = data.num_labels
     n_edges = data.graph.number_of_edges()
+    # graph preprocess
+    g = data.graph
+    # add self loop
+    if args.self_loop:
+        g.remove_edges_from(nx.selfloop_edges(g))
+        g.add_edges_from(zip(g.nodes(), g.nodes()))
+    g = DGLGraph(g)
+    return (g, features, labels, train_mask, val_mask,
+            test_mask, n_edges, n_classes, n_feats)
+
+
+def main(args):
+    # load and preprocess dataset
+    if args.dataset.startswith('file:'):
+        (g, features, labels, train_mask, val_mask,
+         test_mask, n_edges, n_classes, n_feats) = load_dataset_from_file(args.dataset[5:])
+    else:
+        (g, features, labels, train_mask, val_mask,
+         test_mask, n_edges, n_classes, n_feats) = load_builtin_dataset(args.dataset)
     print("""----Data statistics------'
       #Edges %d
       #Classes %d
@@ -59,15 +106,7 @@ def main(args):
         val_mask = val_mask.cuda()
         test_mask = test_mask.cuda()
 
-    # graph preprocess and calculate normalization factor
-    g = data.graph
-    # add self loop
-    if args.self_loop:
-        g.remove_edges_from(nx.selfloop_edges(g))
-        g.add_edges_from(zip(g.nodes(), g.nodes()))
-    g = DGLGraph(g)
-    n_edges = g.number_of_edges()
-    # normalization
+    # graph normalization
     degs = g.in_degrees().float()
     norm = torch.pow(degs, -0.5)
     norm[torch.isinf(norm)] = 0
@@ -77,7 +116,7 @@ def main(args):
 
     # create GCN model
     model = GCN(g,
-                in_feats,
+                n_feats,
                 args.n_hidden,
                 n_classes,
                 args.n_layers,
