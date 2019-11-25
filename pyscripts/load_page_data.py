@@ -123,7 +123,7 @@ def get_text_tokens(page_id_set, text_extractor_data_dir):
                 id = int(entry['id'])
                 if id in page_id_set:
                     ids_to_tokens[id] = [t.lower() for t in nltk.word_tokenize(entry['text']) \
-                                            if t not in string.punctuation and t not in sw]
+                                            if t not in string.punctuation and t.lower() not in sw]
     return ids_to_tokens
 
 
