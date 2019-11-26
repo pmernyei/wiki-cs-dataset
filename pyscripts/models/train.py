@@ -11,6 +11,7 @@ import dgl.data
 
 import load_dgl_data
 from gcn import GCN
+from gat import GAT
 from mlp import create_mlp
 
 def evaluate(model, features, labels, mask):
@@ -75,6 +76,19 @@ def main(args):
                            args.n_hidden,
                            data.n_classes,
                            args.dropout)
+    elif args.model == 'gat':
+        heads = ([args.num_heads] * args.n_layers) + [args.num_out_heads]
+        model = GAT(data.graph,
+                args.n_layers,
+                data.n_feats,
+                args.n_hidden,
+                data.n_classes,
+                heads,
+                F.elu,
+                args.in_drop,
+                args.attn_drop,
+                args.negative_slope,
+                args.residual)
     else:
         # TODO look up how to throw error
         pass
@@ -118,7 +132,7 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='GCN')
+    parser = argparse.ArgumentParser(description='GNNs')
     dgl.data.register_data_args(parser)
     parser.add_argument("--dropout", type=float, default=0.5,
             help="dropout probability")
@@ -137,6 +151,18 @@ if __name__ == '__main__':
     parser.add_argument("--self-loop", action='store_true',
             help="graph self-loop (default=False)")
     parser.set_defaults(self_loop=False)
+    parser.add_argument("--num-heads", type=int, default=8,
+                        help="number of hidden attention heads")
+    parser.add_argument("--num-out-heads", type=int, default=1,
+                        help="number of output attention heads")
+    parser.add_argument("--residual", action="store_true", default=False,
+                        help="use residual connection")
+    parser.add_argument("--in-drop", type=float, default=.6,
+                        help="input feature dropout")
+    parser.add_argument("--attn-drop", type=float, default=.6,
+                        help="attention dropout")
+    parser.add_argument('--negative-slope', type=float, default=0.2,
+                        help="the negative slope of leaky relu")
     parser.add_argument("--model", help="model to train")
     args = parser.parse_args()
     print(args)
