@@ -9,13 +9,9 @@ import torch.nn.functional as F
 from dgl import DGLGraph
 import dgl.data
 
-# Import module from parent directory
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import load_dgl_data
-
 from gcn import GCN
+from mlp import create_mlp
 
 def evaluate(model, features, labels, mask):
     model.eval()
@@ -64,14 +60,24 @@ def main(args):
         norm = norm.cuda()
     data.graph.ndata['norm'] = norm.unsqueeze(1)
 
-    # create GCN model
-    model = GCN(data.graph,
-                data.n_feats,
-                args.n_hidden,
-                data.n_classes,
-                args.n_layers,
-                F.relu,
-                args.dropout)
+    # create appropriate model
+    if args.model == 'gcn':
+        model = GCN(data.graph,
+                    data.n_feats,
+                    args.n_hidden,
+                    data.n_classes,
+                    args.n_layers,
+                    F.relu,
+                    args.dropout)
+    elif args.model == 'mlp':
+        model = create_mlp(args.n_layers,
+                           data.n_feats,
+                           args.n_hidden,
+                           data.n_classes,
+                           args.dropout)
+    else:
+        # TODO look up how to throw error
+        pass
 
     if cuda:
         model.cuda()
@@ -99,10 +105,12 @@ def main(args):
         if epoch >= 3:
             dur.append(time.time() - t0)
 
-        acc = evaluate(model, data.features, data.labels, data.val_mask)
-        print("Epoch {:05d} | Time(s) {:.4f} | Loss {:.4f} | Accuracy {:.4f} | "
-              "ETputs(KTEPS) {:.2f}". format(epoch, np.mean(dur), loss.item(),
-                                             acc, data.n_edges / np.mean(dur) / 1000))
+        train_acc = evaluate(model, data.features, data.labels, data.train_mask)
+        val_acc = evaluate(model, data.features, data.labels, data.val_mask)
+        print("Epoch {:05d} | Time(s) {:.4f} | Loss {:.4f} | Train acc {:.4f} | "
+              "Val acc {:.4f} | ETputs(KTEPS) {:.2f}". format(
+                epoch, np.mean(dur), loss.item(), train_acc, val_acc,
+                data.n_edges / np.mean(dur) / 1000))
 
     print()
     acc = evaluate(model, data.features, data.labels, data.test_mask)
@@ -129,6 +137,7 @@ if __name__ == '__main__':
     parser.add_argument("--self-loop", action='store_true',
             help="graph self-loop (default=False)")
     parser.set_defaults(self_loop=False)
+    parser.add_argument("--model", help="model to train")
     args = parser.parse_args()
     print(args)
 
