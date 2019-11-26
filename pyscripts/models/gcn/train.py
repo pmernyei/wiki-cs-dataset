@@ -7,8 +7,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from dgl import DGLGraph
-from dgl.data import register_data_args, load_data
+import dgl.data
 
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import load_dgl_data
 from gcn import GCN
 
 def evaluate(model, features, labels, mask):
@@ -22,103 +26,47 @@ def evaluate(model, features, labels, mask):
         return correct.item() * 1.0 / len(labels)
 
 
-def load_dataset_from_file(filename):
-    data = json.load(open(filename))
-    features = torch.FloatTensor(np.array(data['features']))
-    labels = torch.LongTensor(np.array(data['labels']))
-    if hasattr(torch, 'BoolTensor'):
-        train_mask = torch.BoolTensor(np.array(data['splits']) == 0)
-        val_mask = torch.BoolTensor(np.array(data['splits']) == 1)
-        test_mask = torch.BoolTensor(np.array(data['splits']) == 2)
-    else:
-        train_mask = torch.ByteTensor(np.array(data['splits']) == 0)
-        val_mask = torch.ByteTensor(np.array(data['splits']) == 1)
-        test_mask = torch.ByteTensor(np.array(data['splits']) == 2)
-    n_feats = features.shape[1]
-    n_classes = len(set(data['labels']))
-
-    g = DGLGraph()
-    g.add_nodes(len(data['features']))
-    edge_list = list(itertools.chain(*[[(i, nb) for nb in nbs] for i,nbs in enumerate(data['links'])]))
-    n_edges = len(edge_list)
-    # add edges two lists of nodes: src and dst
-    src, dst = tuple(zip(*edge_list))
-    g.add_edges(src, dst)
-    # edges are directional in DGL; make them bi-directional
-    g.add_edges(dst, src)
-    return (g, features, labels, train_mask, val_mask,
-            test_mask, n_edges, n_classes, n_feats)
-
-
-def load_builtin_dataset(name):
-    data = load_data(args)
-    features = torch.FloatTensor(data.features)
-    labels = torch.LongTensor(data.labels)
-    if hasattr(torch, 'BoolTensor'):
-        train_mask = torch.BoolTensor(data.train_mask)
-        val_mask = torch.BoolTensor(data.val_mask)
-        test_mask = torch.BoolTensor(data.test_mask)
-    else:
-        train_mask = torch.ByteTensor(data.train_mask)
-        val_mask = torch.ByteTensor(data.val_mask)
-        test_mask = torch.ByteTensor(data.test_mask)
-    n_feats = features.shape[1]
-    n_classes = data.num_labels
-    n_edges = data.graph.number_of_edges()
-    # graph preprocess
-    g = data.graph
-    # add self loop
-    if args.self_loop:
-        g.remove_edges_from(nx.selfloop_edges(g))
-        g.add_edges_from(zip(g.nodes(), g.nodes()))
-    g = DGLGraph(g)
-    return (g, features, labels, train_mask, val_mask,
-            test_mask, n_edges, n_classes, n_feats)
-
-
 def main(args):
     # load and preprocess dataset
     if args.dataset.startswith('file:'):
-        (g, features, labels, train_mask, val_mask,
-         test_mask, n_edges, n_classes, n_feats) = load_dataset_from_file(args.dataset[5:])
+        data = load_dgl_data.load_file(args.dataset[5:])
     else:
-        (g, features, labels, train_mask, val_mask,
-         test_mask, n_edges, n_classes, n_feats) = load_builtin_dataset(args.dataset)
+        data = load_dgl_data.load_builtin(args)
     print("""----Data statistics------'
       #Edges %d
       #Classes %d
       #Train samples %d
       #Val samples %d
       #Test samples %d""" %
-          (n_edges, n_classes,
-              train_mask.int().sum().item(),
-              val_mask.int().sum().item(),
-              test_mask.int().sum().item()))
+          (data.n_edges, data.n_classes,
+              data.train_mask.int().sum().item(),
+              data.val_mask.int().sum().item(),
+              data.test_mask.int().sum().item()))
 
     if args.gpu < 0:
         cuda = False
     else:
         cuda = True
         torch.cuda.set_device(args.gpu)
-        features = features.cuda()
-        labels = labels.cuda()
-        train_mask = train_mask.cuda()
-        val_mask = val_mask.cuda()
-        test_mask = test_mask.cuda()
+        data.features = data.features.cuda()
+        data.labels = data.labels.cuda()
+        data.train_mask = data.train_mask.cuda()
+        data.val_mask = data.val_mask.cuda()
+        data.test_mask = data.test_mask.cuda()
 
     # graph normalization
-    degs = g.in_degrees().float()
+    degs = data.graph.in_degrees().float()
     norm = torch.pow(degs, -0.5)
     norm[torch.isinf(norm)] = 0
     if cuda:
         norm = norm.cuda()
-    g.ndata['norm'] = norm.unsqueeze(1)
+    data.graph.ndata['norm'] = norm.unsqueeze(1)
 
     # create GCN model
-    model = GCN(g,
-                n_feats,
+    model = GCN(data.graph,
+                data.n_feats,
                 args.n_hidden,
-                n_classes,
+                data.n_classes,
                 args.n_layers,
                 F.relu,
                 args.dropout)
@@ -139,8 +87,8 @@ def main(args):
         if epoch >= 3:
             t0 = time.time()
         # forward
-        logits = model(features)
-        loss = loss_fcn(logits[train_mask], labels[train_mask])
+        logits = model(data.features)
+        loss = loss_fcn(logits[data.train_mask], data.labels[data.train_mask])
 
         optimizer.zero_grad()
         loss.backward()
@@ -149,19 +97,19 @@ def main(args):
         if epoch >= 3:
             dur.append(time.time() - t0)
 
-        acc = evaluate(model, features, labels, val_mask)
+        acc = evaluate(model, data.features, data.labels, data.val_mask)
         print("Epoch {:05d} | Time(s) {:.4f} | Loss {:.4f} | Accuracy {:.4f} | "
               "ETputs(KTEPS) {:.2f}". format(epoch, np.mean(dur), loss.item(),
-                                             acc, n_edges / np.mean(dur) / 1000))
+                                             acc, data.n_edges / np.mean(dur) / 1000))
 
     print()
-    acc = evaluate(model, features, labels, test_mask)
+    acc = evaluate(model, data.features, data.labels, data.test_mask)
     print("Test accuracy {:.2%}".format(acc))
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='GCN')
-    register_data_args(parser)
+    dgl.data.register_data_args(parser)
     parser.add_argument("--dropout", type=float, default=0.5,
             help="dropout probability")
     parser.add_argument("--gpu", type=int, default=-1,
