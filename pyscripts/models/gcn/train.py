@@ -9,10 +9,12 @@ import torch.nn.functional as F
 from dgl import DGLGraph
 import dgl.data
 
+# Import module from parent directory
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import load_dgl_data
+
 from gcn import GCN
 
 def evaluate(model, features, labels, mask):
