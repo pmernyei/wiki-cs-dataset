@@ -12,6 +12,7 @@ import dgl.data
 import load_dgl_data
 from gcn import GCN
 from gat import GAT
+from appnp import APPNP
 from mlp import create_mlp
 
 def evaluate(model, features, labels, mask):
@@ -70,28 +71,37 @@ def main(args):
                     args.n_layers,
                     F.relu,
                     args.dropout)
-    elif args.model == 'mlp':
-        model = create_mlp(args.n_layers,
-                           data.n_feats,
-                           args.n_hidden,
-                           data.n_classes,
-                           args.dropout)
     elif args.model == 'gat':
         heads = ([args.num_heads] * args.n_layers) + [args.num_out_heads]
         model = GAT(data.graph,
-                args.n_layers,
-                data.n_feats,
-                args.n_hidden,
-                data.n_classes,
-                heads,
-                F.elu,
-                args.in_drop,
-                args.attn_drop,
-                args.negative_slope,
-                args.residual)
+                    args.n_layers,
+                    data.n_feats,
+                    args.n_hidden,
+                    data.n_classes,
+                    heads,
+                    F.elu,
+                    args.in_drop,
+                    args.attn_drop,
+                    args.negative_slope,
+                    args.residual)
+    elif args.model == 'appnp':
+        model = APPNP(data.graph,
+                      data.n_feats,
+                      args.hidden_sizes,
+                      data.n_classes,
+                      F.relu,
+                      args.in_drop,
+                      args.edge_drop,
+                      args.alpha,
+                      args.k)
+    elif args.model == 'mlp':
+        model = create_mlp(args.n_layers,
+                            data.n_feats,
+                            args.n_hidden,
+                            data.n_classes,
+                            args.dropout)
     else:
-        # TODO look up how to throw error
-        pass
+        raise Exception('Unknown model name {} given'.format(args.model))
 
     if cuda:
         model.cuda()
@@ -134,8 +144,10 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='GNNs')
     dgl.data.register_data_args(parser)
-    parser.add_argument("--dropout", type=float, default=0.5,
-            help="dropout probability")
+
+    parser.add_argument("--model", help="model to train")
+
+    # Arguments applicable for multiple (not necessarily all) models
     parser.add_argument("--gpu", type=int, default=-1,
             help="gpu")
     parser.add_argument("--lr", type=float, default=1e-2,
@@ -148,22 +160,36 @@ if __name__ == '__main__':
             help="number of hidden gcn layers")
     parser.add_argument("--weight-decay", type=float, default=5e-4,
             help="Weight for L2 loss")
+    parser.add_argument("--dropout", type=float, default=0.5,
+            help="dropout probability")
     parser.add_argument("--self-loop", action='store_true',
             help="graph self-loop (default=False)")
+    parser.add_argument("--in-drop", type=float, default=.6,
+                        help="input feature dropout")
     parser.set_defaults(self_loop=False)
+
+    # GAT arguments
     parser.add_argument("--num-heads", type=int, default=8,
                         help="number of hidden attention heads")
     parser.add_argument("--num-out-heads", type=int, default=1,
                         help="number of output attention heads")
     parser.add_argument("--residual", action="store_true", default=False,
                         help="use residual connection")
-    parser.add_argument("--in-drop", type=float, default=.6,
-                        help="input feature dropout")
     parser.add_argument("--attn-drop", type=float, default=.6,
                         help="attention dropout")
     parser.add_argument('--negative-slope', type=float, default=0.2,
                         help="the negative slope of leaky relu")
-    parser.add_argument("--model", help="model to train")
+
+    # APPNP arguments
+    parser.add_argument("--edge-drop", type=float, default=0.5,
+                        help="edge propagation dropout")
+    parser.add_argument("--k", type=int, default=10,
+                        help="Number of propagation steps")
+    parser.add_argument("--alpha", type=float, default=0.1,
+                        help="Teleport Probability")
+    parser.add_argument("--hidden_sizes", type=int, nargs='+', default=[64],
+                        help="hidden unit sizes for appnp")
+
     args = parser.parse_args()
     print(args)
 
