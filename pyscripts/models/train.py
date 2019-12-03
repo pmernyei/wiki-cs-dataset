@@ -137,8 +137,17 @@ def main(args):
                 data.n_edges / np.mean(dur) / 1000))
 
     print()
-    acc = evaluate(model, data.features, data.labels, data.test_mask)
-    print("Test accuracy {:.2%}".format(acc))
+    if args.test:
+        acc = evaluate(model, data.features, data.labels, data.test_mask)
+        print("Test accuracy {:.2%}".format(acc))
+
+    if args.preds_output_file is not None:
+        mask = data.train_mask + data.val_mask
+        logits = model(data.features)
+
+        logits = logits[mask]
+        _, preds = torch.max(logits, dim=1)
+        json.dump(preds.tolist(), open(args.preds_output_file,'w'))
 
 
 if __name__ == '__main__':
@@ -146,6 +155,11 @@ if __name__ == '__main__':
     dgl.data.register_data_args(parser)
 
     parser.add_argument("--model", help="model to train")
+    parser.add_argument("--test", action='store_true',
+            help="evaluate on test set after training (default=False)")
+    parser.set_defaults(test=False)
+    parser.add_argument("--preds-output-file",
+            help="file for writin predictions on train/validation set for analysis")
 
     # Arguments applicable for multiple (not necessarily all) models
     parser.add_argument("--gpu", type=int, default=-1,
@@ -164,9 +178,9 @@ if __name__ == '__main__':
             help="dropout probability")
     parser.add_argument("--self-loop", action='store_true',
             help="graph self-loop (default=False)")
+    parser.set_defaults(self_loop=False)
     parser.add_argument("--in-drop", type=float, default=.6,
                         help="input feature dropout")
-    parser.set_defaults(self_loop=False)
 
     # GAT arguments
     parser.add_argument("--num-heads", type=int, default=8,
