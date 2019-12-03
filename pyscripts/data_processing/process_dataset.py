@@ -69,7 +69,7 @@ def raw_data_dict(node):
         'tokens': node.tokens
     }
 
-def output_data(nodes, vectors_outfile, raw_data_outfile, train_split=0.03):
+def output_data(nodes, vectors_outfile, raw_data_outfile, train_split=0.05):
     labels = list(label_set(nodes))
     node_ids_for_labels = {lab: [] for lab in labels}
     for node in nodes.values():
