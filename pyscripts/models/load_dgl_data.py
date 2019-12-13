@@ -111,11 +111,11 @@ def load(args):
         data.features = data.features.cuda()
         data.labels = data.labels.cuda()
         data.test_mask = data.test_mask.cuda()
-        for i in len(data.train_masks):
+        for i in range(len(data.train_masks)):
             data.train_masks[i] = data.train_masks[i].cuda()
-        for i in len(data.val_masks):
+        for i in range(len(data.val_masks)):
             data.val_masks[i] = data.val_masks[i].cuda()
-        for i in len(data.stopping_masks):
+        for i in range(len(data.stopping_masks)):
             data.stopping_masks[i] = data.stopping_masks[i].cuda()
 
     # graph normalization
