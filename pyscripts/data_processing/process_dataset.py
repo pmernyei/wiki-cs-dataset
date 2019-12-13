@@ -69,40 +69,58 @@ def raw_data_dict(node):
         'tokens': node.tokens
     }
 
-def output_data(nodes, vectors_outfile, raw_data_outfile, train_split=0.05):
+def output_data(nodes, vectors_outfile, raw_data_outfile, train_ratio=0.05,
+                test_ratio=0.5, stopping_ratio = 0.3, n_train_splits = 20):
     labels = list(label_set(nodes))
     node_ids_for_labels = {lab: [] for lab in labels}
+    all_ids_list = []
     for node in nodes.values():
         node_ids_for_labels[node.label].append(node.id)
-    training_ids = []
-    validation_ids = []
-    test_ids = []
+        all_ids_list.append(node.id)
+
+    test_ids = set()
+    train_sets = [set() for _ in range(n_train_splits)]
+    stopping_sets = [set() for _ in range(n_train_splits)]
+    val_sets = [set() for _ in range(n_train_splits)]
     for lab in labels:
         ids = node_ids_for_labels[lab]
-        train_cutoff = int(train_split*len(ids))
-        validate_cutoff = int((1-((1-train_split)/2))*len(ids))
-        training_ids += ids[:train_cutoff]
-        validation_ids += ids[train_cutoff:validate_cutoff]
-        test_ids += ids[validate_cutoff:]
-    random.shuffle(training_ids)
-    random.shuffle(validation_ids)
-    random.shuffle(test_ids)
-    splits = len(training_ids)*[0] + len(validation_ids)*[1] + len(test_ids)*[2]
-    final_id_list = training_ids + validation_ids + test_ids
-    remap_node_ids = {old_id: new_id for new_id, old_id in enumerate(final_id_list)}
-    node_features = [nodes[id].vector.tolist() for id in final_id_list]
+        random.shuffle(ids)
+        n_train = int(train_ratio*len(ids))
+        n_test = int(test_ratio*len(ids))
+        n_stopping = int(stopping_ratio*len(ids))
+
+        test_ids.update(ids[:n_test])
+        visible_ids = ids[n_test:]
+        for i in range(n_train_splits):
+            random.shuffle(visible_ids)
+            train_sets[i].update(visible_ids[:n_train])
+            stopping_sets[i].update(visible_ids[n_train : (n_train+n_stopping)])
+            val_sets[i].update(visible_ids[n_train+n_stopping:])
+
+    remap_node_ids = {old_id: new_id for new_id, old_id in enumerate(all_ids_list)}
+
+    test_mask = [(id in test_ids) for id in all_ids_list]
+    train_masks = [[id in train_sets[i] for id in all_ids_list] for i in range(n_train_splits)]
+    stopping_masks = [[id in stopping_sets[i] for id in all_ids_list] for i in range(n_train_splits)]
+    val_masks = [[id in val_sets[i] for id in all_ids_list] for i in range(n_train_splits)]
+
+    node_features = [nodes[id].vector.tolist() for id in all_ids_list]
     label_ids = {lab: i for i,lab in enumerate(labels)}
-    labels_vec = [label_ids[nodes[id].label] for id in final_id_list]
-    links = [[remap_node_ids[nb] for nb in nodes[id].outlinks] for id in final_id_list]
+    labels_vec = [label_ids[nodes[id].label] for id in all_ids_list]
+    links = [[remap_node_ids[nb] for nb in nodes[id].outlinks] for id in all_ids_list]
+
     vector_data = {
         'features': node_features,
         'labels': labels_vec,
         'links': links,
-        'splits': splits
+        'train_masks': train_masks,
+        'stopping_masks': stopping_masks,
+        'val_masks': val_masks,
+        'test_mask': test_mask
     }
     raw_metadata = {
         'labels': {i: lab for i,lab in enumerate(labels)},
-        'nodes': [raw_data_dict(nodes[id]) for id in final_id_list]
+        'nodes': [raw_data_dict(nodes[id]) for id in all_ids_list]
     }
     json.dump(vector_data, open(vectors_outfile, 'w'))
     json.dump(raw_metadata, open(raw_data_outfile, 'w'))
