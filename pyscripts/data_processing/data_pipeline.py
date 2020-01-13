@@ -22,23 +22,34 @@ Outputs into a given directory:
 
 import sys
 import os
+import argparse
 from extract_full_data_for_dataset import load_mappings_by_file
 from process_dataset import process_with_glove_vectors
 from analyze_datasets import analyze
 
 if __name__ == '__main__':
-    label_mapping_filename = sys.argv[1]
-    wiki_dump_dir = sys.argv[2]
-    category_data_dir = sys.argv[3]
-    text_data_dir = sys.argv[4]
-    glove_filename = sys.argv[5]
-    output_dir = sys.argv[6]
-    load_mappings_by_file(label_mapping_filename,
-        os.path.join(category_data_dir, 'page2cat.tsv'),
-        os.path.join(wiki_dump_dir, 'page.csv'),
-        os.path.join(wiki_dump_dir, 'pagelinks.csv'),
-        os.path.join(wiki_dump_dir, 'redirect.csv'),
-        text_data_dir,
-        output_dir)
-    process_with_glove_vectors(output_dir, glove_filename)
-    analyze(output_dir)
+    parser = argparse.ArgumentParser(
+        description='Create Wikipedia node classification dataset from sources')
+    parser.add_argument('--label-mapping',
+        help='JSON file giving label mapping')
+    parser.add_argument('--wiki-dump-dir',
+        help='Directory containing preprocessed page, pagelinks, redirect '
+             'table CSVs')
+    parser.add_argument('--category-data-dir',
+        help='Directory containing sanitized category data')
+    parser.add_argument('--text-data-dir',
+        help='Directory containing extracted article texts')
+    parser.add_argument('--glove-embedding-file', help='Word embedding file')
+    parser.add_argument('--output-dir', help='Directory to write results to')
+
+    args = parser.parse_args()
+
+    load_mappings_by_file(args.label_mapping,
+        os.path.join(args.category_data_dir, 'page2cat.tsv'),
+        os.path.join(args.wiki_dump_dir, 'page.csv'),
+        os.path.join(args.wiki_dump_dir, 'pagelinks.csv'),
+        os.path.join(args.wiki_dump_dir, 'redirect.csv'),
+        args.text_data_dir,
+        args.output_dir)
+    process_with_glove_vectors(args.output_dir, args.glove_embedding_file)
+    analyze(args.output_dir)
