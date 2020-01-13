@@ -251,12 +251,34 @@ def load_single_dataset(label_mapping, page2cat_filename, page_table_filename,
         redirect_table_filename, text_extractor_data)
 
 
-def load_mappings_by_file(mappings_filename, page2cat_filename,
+def extract_by_single_mapping_file(mappings_filename, page2cat_filename,
                             page_table_filename, pagelinks_table_filename,
                             redirect_table_filename, text_extractor_data,
                             output_dir):
     """
-    Load datasets based on label mappings specified in a JSON file.
+    Extract a single dataset based on a label mapping specified in the given
+    JSON file. The result will be written to output_dir/fulldata.pickle.
+    """
+    with open(mappings_filename, 'r') as file:
+        mapping = json.load(file)
+    load_with_multiple_label_maps(
+        [mapping], page2cat_filename, page_table_filename,
+        pagelinks_table_filename, redirect_table_filename, text_extractor_data,
+        os.path.dirname(output_dir),
+        [os.path.basebname(os.path.normpath(output_dir))]
+    )
+    
+
+def extract_by_multiple_mappings_file(mappings_filename, page2cat_filename,
+                            page_table_filename, pagelinks_table_filename,
+                            redirect_table_filename, text_extractor_data,
+                            output_dir):
+    """
+    Load datasets based on label mappings specified in a JSON file storing with
+    the top level object mapping dataset names to label mappings.
+
+    The datasets will be written to child directories of output_dir named
+    according to these keys.
     """
     with open(mappings_filename, 'r') as file:
         mappings = json.load(file)

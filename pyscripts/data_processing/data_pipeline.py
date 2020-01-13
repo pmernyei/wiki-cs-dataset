@@ -23,7 +23,7 @@ Outputs into a given directory:
 import sys
 import os
 import argparse
-from extract_full_data_for_dataset import load_mappings_by_file
+from extract_full_data_for_dataset import extract_by_single_mapping_file
 from process_dataset import process_with_glove_vectors
 from analyze_datasets import analyze
 
@@ -44,12 +44,14 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    load_mappings_by_file(args.label_mapping,
+    extract_by_single_mapping_file(
+        args.label_mapping,
         os.path.join(args.category_data_dir, 'page2cat.tsv'),
         os.path.join(args.wiki_dump_dir, 'page.csv'),
         os.path.join(args.wiki_dump_dir, 'pagelinks.csv'),
         os.path.join(args.wiki_dump_dir, 'redirect.csv'),
         args.text_data_dir,
-        args.output_dir)
+        args.output_dir
+    )
     process_with_glove_vectors(args.output_dir, args.glove_embedding_file)
     analyze(args.output_dir)
