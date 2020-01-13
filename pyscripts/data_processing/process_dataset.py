@@ -59,7 +59,9 @@ def raw_data_dict(node):
 
 
 def output_data(nodes, vectors_outfile, raw_data_outfile, train_ratio=0.05,
-                test_ratio=0.5, stopping_ratio = 0.3, n_train_splits = 20):
+                test_ratio=0.5, stopping_ratio = 0.3, n_train_splits = 20,
+                seed=42):
+    rnd = random.Random(seed)
     labels = list(label_set(nodes))
     node_ids_for_labels = {lab: [] for lab in labels}
     all_ids_list = []
@@ -73,7 +75,7 @@ def output_data(nodes, vectors_outfile, raw_data_outfile, train_ratio=0.05,
     val_sets = [set() for _ in range(n_train_splits)]
     for lab in labels:
         ids = node_ids_for_labels[lab]
-        random.shuffle(ids)
+        rnd.shuffle(ids)
         n_train = int(train_ratio*len(ids))
         n_test = int(test_ratio*len(ids))
         n_stopping = int(stopping_ratio*len(ids))
@@ -81,7 +83,7 @@ def output_data(nodes, vectors_outfile, raw_data_outfile, train_ratio=0.05,
         test_ids.update(ids[:n_test])
         visible_ids = ids[n_test:]
         for i in range(n_train_splits):
-            random.shuffle(visible_ids)
+            rnd.shuffle(visible_ids)
             train_sets[i].update(visible_ids[:n_train])
             stopping_sets[i].update(visible_ids[n_train : (n_train+n_stopping)])
             val_sets[i].update(visible_ids[n_train+n_stopping:])
