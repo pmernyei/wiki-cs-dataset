@@ -265,9 +265,9 @@ def extract_by_single_mapping_file(mappings_filename, page2cat_filename,
         [mapping], page2cat_filename, page_table_filename,
         pagelinks_table_filename, redirect_table_filename, text_extractor_data,
         os.path.dirname(output_dir),
-        [os.path.basebname(os.path.normpath(output_dir))]
+        [os.path.basename(os.path.normpath(output_dir))]
     )
-    
+
 
 def extract_by_multiple_mappings_file(mappings_filename, page2cat_filename,
                             page_table_filename, pagelinks_table_filename,
