@@ -24,21 +24,29 @@ def calculate_connectivity_stats(nodes, label_list):
     - inter_connectivity: overall probability that two nodes with different
         labels are connected
     """
-    ids = {lab: i for lab,i in zip(label_list, range(len(label_list)))}
-    link_counts = np.zeros((len(label_list), len(label_list)))
-    nodes_for_label = np.zeros(len(label_list))
+    C = len(label_list)
+    ids = {lab: i for lab,i in zip(label_list, range(C))}
+
+    link_counts = np.zeros((C, C))
+    nodes_for_label = np.zeros(C)
 
     for node in nodes.values():
         nodes_for_label[ids[node.label]] += 1
         for id in node.outlinks:
             link_counts[ids[node.label]][ids[nodes[id].label]] += 1
 
-    connectivities = link_counts / (nodes_for_label*np.reshape(nodes_for_label, (len(label_list), 1)))
-    inside_links = sum([link_counts[i][i] for i in range(len(label_list))])
+    connectivities = (link_counts /
+        (nodes_for_label*np.reshape(nodes_for_label, (C, 1))))
+    inside_links = sum([link_counts[i][i] for i in range(C)])
     inside_link_bound = sum([s*s for s in nodes_for_label])
     inside_connectivity = inside_links / inside_link_bound
-    inter_links = sum([link_counts[i][j] for (i,j) in product(range(len(label_list)),range(len(label_list))) if i != j])
-    inter_link_bound = sum([nodes_for_label[i]*nodes_for_label[j] for (i,j) in product(range(len(label_list)),range(len(label_list))) if i != j])
+    inter_links = sum(
+        [link_counts[i][j] for (i,j) in product(range(C),range(C)) if i != j]
+    )
+    inter_link_bound = sum(
+        [nodes_for_label[i]*nodes_for_label[j]
+            for (i,j) in product(range(C),range(C)) if i != j]
+    )
     inter_connectivity = inter_links / inter_link_bound
     return {
         'inside_connectivity': float(inside_connectivity),
@@ -52,12 +60,15 @@ def calculate_avg_cosine_similarities(nodes, label_list, sample_count=1000):
     Calculate the average cosine similarities between vectors of nodes from
     every pair of classes.
     """
-    totals = np.zeros((len(label_list), len(label_list)))
-    valids = np.zeros((len(label_list), len(label_list)))
-    nodes_per_label = [[node for node in nodes.values() if lab == node.label] for lab in label_list]
+    C = len(label_list)
+    totals = np.zeros((C, C))
+    valids = np.zeros((C, C))
+    nodes_per_label = [[node for node in nodes.values() if lab == node.label]
+        for lab in label_list]
 
-    for i,j in product(range(len(label_list)), range(len(label_list))):
-        samples = min(sample_count, min(len(nodes_per_label[i]), len(nodes_per_label[j])))
+    for i,j in product(range(C), range(C)):
+        samples = min(sample_count,
+                      min(len(nodes_per_label[i]), len(nodes_per_label[j])))
         left = random.sample(nodes_per_label[i], samples)
         right = random.sample(nodes_per_label[j], samples)
         for node1, node2 in zip(left, right):
@@ -103,7 +114,8 @@ def analyze_nodes(nodes):
     labels = list(process_dataset.label_set(nodes))
     sizes = {
         'total': len(nodes),
-        'label_sizes': {lab: sum(lab == node.label for node in nodes.values()) for lab in labels}
+        'label_sizes': {lab: sum(lab == node.label for node in nodes.values())
+            for lab in labels}
     }
     all_stats = {
         'labels': labels,
@@ -116,7 +128,8 @@ def analyze_nodes(nodes):
 def analyze(data_dir):
     data = pickle.load(open(os.path.join(data_dir, 'rawdata.pickle'), 'rb'))
     stats = analyze_nodes(data)
-    json.dump(stats, open(os.path.join(data_dir, 'analysis.txt'), 'w'), indent=4)
+    json.dump(stats, open(os.path.join(data_dir, 'analysis.txt'), 'w'),
+                indent=4)
 
 if __name__ == '__main__':
     analyze(sys.argv[1])

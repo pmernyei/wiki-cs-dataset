@@ -25,7 +25,7 @@ def get_entire_wiki_word_frequencies(text_extractor_data_dir, output=None):
         for file in files:
             for line in open(os.path.join(root, file), "r", encoding='utf8'):
                 entry = json.loads(line)
-                tokens = [t.lower() for t in nltk.word_tokenize(entry['text']) \
+                tokens = [t.lower() for t in nltk.word_tokenize(entry['text'])
                                             if t not in string.punctuation]
                 for t in tokens:
                     freqs[t] = freqs.get(t, 0) + 1

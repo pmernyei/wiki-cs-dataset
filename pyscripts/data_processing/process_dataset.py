@@ -16,7 +16,10 @@ def label_set(nodes):
 def add_binary_word_vectors(nodes, words):
     for id,node in nodes.items():
         token_set = set(node.tokens)
-        node.vector = np.concatenate((node.vector, np.array([bool(word in token_set) for word in words])))
+        node.vector = np.concatenate(
+            (node.vector,
+            np.array([bool(word in token_set) for word in words]))
+        )
 
 
 def add_glove_word_vectors(nodes, glove_dict, words_whitelist=None):
@@ -24,7 +27,8 @@ def add_glove_word_vectors(nodes, glove_dict, words_whitelist=None):
     for id,node in nodes.items():
         sum = np.zeros(len(next(iter(glove_dict.values()))))
         for t in node.tokens:
-            if t in glove_dict and (words_whitelist is None or t in words_whitelist):
+            if (t in glove_dict and
+                (words_whitelist is None or t in words_whitelist)):
                 sum += glove_dict[t]
         if np.linalg.norm(sum) == 0.0:
             zeros += [node.title];
@@ -85,14 +89,26 @@ def output_data(nodes, vectors_outfile, raw_data_outfile, train_ratio=0.05,
     remap_node_ids = {old_id: new_id for new_id, old_id in enumerate(all_ids_list)}
 
     test_mask = [(id in test_ids) for id in all_ids_list]
-    train_masks = [[id in train_sets[i] for id in all_ids_list] for i in range(n_train_splits)]
-    stopping_masks = [[id in stopping_sets[i] for id in all_ids_list] for i in range(n_train_splits)]
-    val_masks = [[id in val_sets[i] for id in all_ids_list] for i in range(n_train_splits)]
+    train_masks = [
+        [id in train_sets[i] for id in all_ids_list]
+            for i in range(n_train_splits)
+    ]
+    stopping_masks = [
+        [id in stopping_sets[i] for id in all_ids_list]
+            for i in range(n_train_splits)
+    ]
+    val_masks = [
+        [id in val_sets[i] for id in all_ids_list]
+            for i in range(n_train_splits)
+    ]
 
     node_features = [nodes[id].vector.tolist() for id in all_ids_list]
     label_ids = {lab: i for i,lab in enumerate(labels)}
     labels_vec = [label_ids[nodes[id].label] for id in all_ids_list]
-    links = [[remap_node_ids[nb] for nb in nodes[id].outlinks] for id in all_ids_list]
+    links = [
+        [remap_node_ids[nb] for nb in nodes[id].outlinks]
+            for id in all_ids_list
+    ]
 
     vector_data = {
         'features': node_features,

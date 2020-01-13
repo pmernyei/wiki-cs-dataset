@@ -40,7 +40,8 @@ def get_category_sizes(page2cat_filename, output_filename=None):
     return counts
 
 
-def calculate_milestone_tree(subcats_filename, sizes_filename=None, page2cat_filename=None, out_filename=None):
+def calculate_milestone_tree(subcats_filename, sizes_filename=None,
+                            page2cat_filename=None, out_filename=None):
     """
     Builds a tree based on the category parent relations, and calculates
     statistics for subtrees.
@@ -107,7 +108,8 @@ def get_all_descendants(root, children_map):
     visiting them based on the map from parents to children.
     """
     return {root}.union(
-        *[get_all_descendants(child, children_map) for child in children_map.get(root, [])]
+        *[get_all_descendants(child, children_map)
+            for child in children_map.get(root, [])]
     )
 
 
@@ -129,4 +131,5 @@ def print_tree(root, milestone_tree, output=sys.stdout, indent_level=0):
 
 
 if __name__ == '__main__':
-    calculate_milestone_tree(sys.argv[1], page2cat_filename=sys.argv[2], out_filename=sys.argv[3])
+    calculate_milestone_tree(sys.argv[1], page2cat_filename=sys.argv[2],
+                                out_filename=sys.argv[3])

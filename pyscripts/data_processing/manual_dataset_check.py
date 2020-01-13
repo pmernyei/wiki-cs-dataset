@@ -14,7 +14,9 @@ def print_node_data(node, all_nodes_map):
     print('Title:', node.title, '; id:', node.id)
     print('Label:', node.label)
     print('Text:', ' '.join(node.tokens[:20])+'...')
-    print('Linked pages:', [all_nodes_map[id].title for id in node.outlinks][:5], 'total', len(node.outlinks))
+    print('Linked pages:',
+        [all_nodes_map[id].title for id in node.outlinks][:5], 'total',
+        len(node.outlinks))
     print()
 
 
@@ -24,7 +26,9 @@ def sample_and_validate(dataset_dir, sample_count=20):
     ask user to evaluate correctness of labels, write results to file in that
     directory.
     """
-    nodes = pickle.load(open(os.path.join(dataset_dir, 'fulldata.pickle'), 'rb'))
+    nodes = pickle.load(
+        open(os.path.join(dataset_dir, 'fulldata.pickle'), 'rb')
+    )
     labels = process_dataset.label_set(nodes)
     nodes_for_labels = {lab:[] for lab in labels}
     verdicts = {}

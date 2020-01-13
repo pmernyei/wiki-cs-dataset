@@ -104,7 +104,8 @@ def dump_to_csv(input_filename, output_filename):
             if is_insert(line):
                 values = get_values(line)
                 if values_sanity_check(values):
-                    parse_values(values, open(output_filename, 'a+', encoding='utf-8', newline=''))
+                    parse_values(values, open(output_filename, 'a+',
+                        encoding='utf-8', newline=''))
     except KeyboardInterrupt:
         sys.exit(0)
 
