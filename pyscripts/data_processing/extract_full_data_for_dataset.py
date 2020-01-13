@@ -1,3 +1,11 @@
+"""
+Extracts relevant node data for pages in given categories (mapped to node
+classes) from Wikipedia database tables (preprocessed to CSV form) and outputs
+of the category sanitizer tool.
+
+Outputs the extracted datasets into .pickle files.
+"""
+
 import csv
 import os
 import json
@@ -16,7 +24,12 @@ except LookupError:
     nltk.download('punkt')
     nktk.download('stopwords')
 
+
 def page_titles_to_ids(titles_set, page_table_filename):
+    """
+    Parse data from the Wikipedia page database table to get page IDs for
+    the given set of page titles.
+    """
     mapping = {}
     with open(page_table_filename, encoding='utf8') as page_file:
         reader = csv.reader(page_file)
@@ -28,6 +41,10 @@ def page_titles_to_ids(titles_set, page_table_filename):
 
 
 def page_titles_to_labels(category_label_mapping, page2cat_filename):
+    """
+    Given the sets of categories for each label, parse the mapping from page titles
+    to categories and output the page titles mapped to labels.
+    """
     category_to_label = {}
     for (name, category_list) in category_label_mapping.items():
         for category in category_list:
@@ -51,6 +68,10 @@ def page_titles_to_labels(category_label_mapping, page2cat_filename):
 
 
 def load_redirects(page_table_filename, redirect_table_filename):
+    """
+    Load the redirect table as a mapping between page IDs. Double redirects not
+    handled because they are considered invalid by Wikipedia's standards.
+    """
     target_title_to_source_id = {}
     with open(redirect_table_filename, encoding='utf8') as redirect_file:
         reader = csv.reader(redirect_file)
@@ -74,6 +95,12 @@ def load_redirects(page_table_filename, redirect_table_filename):
 
 
 def links_between_pages(page_id_set, pagelinks_table_filename, page_table_filename, redirect_table_filename):
+    """
+    Produce the graph of hyperlinks between nodes with page IDs in the given
+    set, taking into account redirects.
+    """
+
+    # Map target title to source IDs
     titles_linked_from = {}
     with open(pagelinks_table_filename, encoding='utf8') as pagelinks_file:
         reader = csv.reader(pagelinks_file)
@@ -84,8 +111,10 @@ def links_between_pages(page_id_set, pagelinks_table_filename, page_table_filena
                     titles_linked_from[to_title] = []
                 titles_linked_from[to_title].append(from_id)
 
+    # Load ID to ID redirects
     redirects = load_redirects(page_table_filename, redirect_table_filename)
 
+    # Produce ID to ID links using by matching titles to IDs in the pages table
     links = {id: [] for id in page_id_set}
     with open(page_table_filename, encoding='utf8') as page_file:
         reader = csv.reader(page_file)
@@ -103,17 +132,10 @@ def links_between_pages(page_id_set, pagelinks_table_filename, page_table_filena
     return links
 
 
-def filter_for_main_namespace(input_filename, output_filename, field_indices):
-    with open(input_filename, encoding='utf8') as input_file, \
-         open(output_filename, mode='w+', encoding='utf8', newline='') as output_file:
-        reader = csv.reader(input_file)
-        writer = csv.writer(output_file, quoting=csv.QUOTE_MINIMAL)
-        for row in reader:
-            if all(row[idx] == '0' for idx in field_indices):
-                writer.writerow(row)
-
-
 def get_text_tokens(page_id_set, text_extractor_data_dir):
+    """
+    Process extracted text data to get tokenized text for pages with given IDs.
+    """
     ids_to_tokens = {}
     sw = stopwords.words('english')+['""', "''", '``', "'s"]
     for root, dirs, files in os.walk(text_extractor_data_dir):
@@ -130,6 +152,20 @@ def get_text_tokens(page_id_set, text_extractor_data_dir):
 def load_with_multiple_label_maps(label_mapping_list, page2cat_filename, page_table_filename,
                                 pagelinks_table_filename, redirect_table_filename,
                                 text_extractor_data, output_dir=None, output_names=None):
+    """
+    Extract muliple datasets defined by mapping sets of categories to labels.
+
+    Each dataset is defined by a list of labels with categories corresponding to
+    each label. The source files are read only once to load all data relevant
+    for all label mappings, then output each dataset to a .pickle file as a map
+    from node IDs to node objects, location given by output_dir.
+
+    If the output_dir parameter is not given, the function returns the results
+    without saving them to file.
+
+    Optionally output_names can be given to name each dataset, otherwise they
+    will be numbered.
+    """
     # Get titles to mapped to labels for each label dataset
     print(datetime.now().strftime('%H:%M:%S'), 'Loading page titles for labels...')
     multi_titles_to_labels = [page_titles_to_labels(label_mapping, page2cat_filename) \
@@ -177,18 +213,25 @@ def load_with_multiple_label_maps(label_mapping_list, page2cat_filename, page_ta
             print(datetime.now().strftime('%H:%M:%S'), 'Writing dataset', i, '...')
             out_filename = os.path.join(output_dir, 'ds_'+str(i)) \
                 if output_names is None \
-                else os.path.join(output_dir, output_names[i], 'data')
+                else os.path.join(output_dir, output_names[i], 'fulldata.pickle')
             with open(out_filename, 'wb') as output:
                 pickle.dump(result[i], output, -1)
     return result
 
 
-def load_single_dataset(label_mapping, page2cat_filename, page_table_filename, pagelinks_table_filename, redirect_table_filename, text_extractor_data):
-    return load_with_multiple_label_maps([label_mapping], page2cat_filename, page_table_filename, pagelinks_table_filename, redirect_table_filename, text_extractor_data)
+def load_single_dataset(label_mapping, page2cat_filename, page_table_filename,
+    pagelinks_table_filename, redirect_table_filename, text_extractor_data):
+    return load_with_multiple_label_maps([label_mapping], page2cat_filename,
+        page_table_filename, pagelinks_table_filename,
+        redirect_table_filename, text_extractor_data)
+
 
 def load_mappings_by_file(mappings_filename, page2cat_filename, page_table_filename,
                                 pagelinks_table_filename, redirect_table_filename,
                                 text_extractor_data, output_dir):
+    """
+    Load datasets based on label mappings specified in a JSON file.
+    """
     with open(mappings_filename, 'r') as file:
         mappings = json.load(file)
         names = list(mappings.keys())
@@ -196,6 +239,7 @@ def load_mappings_by_file(mappings_filename, page2cat_filename, page_table_filen
     load_with_multiple_label_maps(mapping_list, page2cat_filename, page_table_filename,
                                     pagelinks_table_filename, redirect_table_filename,
                                     text_extractor_data, output_dir, names)
+
 
 if __name__ == '__main__':
     load_mappings_by_file(sys.argv[1],

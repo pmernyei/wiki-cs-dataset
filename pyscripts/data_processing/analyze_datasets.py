@@ -1,3 +1,7 @@
+"""
+Calculate statistics about an extracted dataset.
+"""
+
 from wiki_node import WikiDataNode
 from itertools import product
 from datetime import datetime
@@ -11,6 +15,15 @@ import sys
 import process_dataset
 
 def calculate_connectivity_stats(nodes, label_list):
+    """
+    Calculate the following stats:
+    - connectivity_matrix: matrix of conditional probabilities that a specific
+        node with label A links to a specific other node with label B.
+    - inside_connectivity: overall probability that two nodes with the same
+        label are connected
+    - inter_connectivity: overall probability that two nodes with different
+        labels are connected
+    """
     ids = {lab: i for lab,i in zip(label_list, range(len(label_list)))}
     link_counts = np.zeros((len(label_list), len(label_list)))
     nodes_for_label = np.zeros(len(label_list))
@@ -35,6 +48,10 @@ def calculate_connectivity_stats(nodes, label_list):
 
 
 def calculate_avg_cosine_similarities(nodes, label_list, sample_count=1000):
+    """
+    Calculate the average cosine similarities between vectors of nodes from
+    every pair of classes.
+    """
     totals = np.zeros((len(label_list), len(label_list)))
     valids = np.zeros((len(label_list), len(label_list)))
     nodes_per_label = [[node for node in nodes.values() if lab == node.label] for lab in label_list]
@@ -55,6 +72,12 @@ def calculate_avg_cosine_similarities(nodes, label_list, sample_count=1000):
     return totals
 
 def cosine_similarity_classification_accuracy(nodes):
+    """
+    Calculate how accurately we could classify nodes by calculating the average
+    vector of each class and mapping each example to the closest of those class
+    averages. No train/test split so just serves as a quick ballpark, not a
+    rigorous measure.
+    """
     labels = process_dataset.label_set(nodes)
     label_ids = {lab: i for lab,i in zip(labels, range(len(labels)))}
     id_to_label = {i: lab for lab,i in label_ids.items()}
@@ -76,26 +99,7 @@ def cosine_similarity_classification_accuracy(nodes):
     return correct_count / len(nodes)
 
 
-def word_selection_stats(nodes, label_list, multipliers, thresholds):
-    print(datetime.now().strftime('%H:%M:%S'), 'Starting experiments...')
-    results = {multiplier: {threshold: {} for threshold in thresholds} for multiplier in multipliers}
-    for multiplier, threshold in product(multipliers, thresholds):
-        print(datetime.now().strftime('%H:%M:%S'), 'Trying', multiplier, threshold, '...')
-        words = process_dataset.get_significant_words(nodes, multiplier, threshold)
-        print(datetime.now().strftime('%H:%M:%S'), 'Selected', len(words), 'words')
-        process_dataset.add_binary_word_vectors(nodes, words)
-        zeros = int(sum(np.sum(node.vector) == 0 for node in nodes.values()))
-        results[multiplier][threshold] = {
-            'words_dim': len(words),
-            'zero_vectors': zeros,
-            'baseline_accuracy': cosine_similarity_classification_accuracy(nodes),
-            'avg_class_similarities': calculate_avg_cosine_similarities(nodes, label_list).tolist()
-        }
-        print(datetime.now().strftime('%H:%M:%S'), 'Baseline acc', results[multiplier][threshold]['baseline_accuracy'])
-    return results
-
-
-def full_analysis(nodes, include_prediction_baseline = False):
+def analyze_nodes(nodes):
     labels = list(process_dataset.label_set(nodes))
     sizes = {
         'total': len(nodes),
@@ -106,47 +110,13 @@ def full_analysis(nodes, include_prediction_baseline = False):
         'sizes': sizes,
         'connectivity': calculate_connectivity_stats(nodes, labels),
     }
-    if include_prediction_baseline:
-        all_stats['word_selections'] = word_selection_stats(nodes, labels, [2, 5, 10, 20, 50, 100], [100, 200, 500, 1000, 2000, 5000, 10000])
     return all_stats
 
 
-def print_node_data(node, all_nodes_map):
-    print('Title:', node.title, '; id:', node.id)
-    print('Label:', node.label)
-    print('Text:', ' '.join(node.tokens[:20])+'...')
-    print('Linked pages:', [all_nodes_map[id].title for id in node.outlinks][:5], 'total', len(node.outlinks))
-    print()
-
-
-def print_sample_pages(nodes, sample_count=5):
-    samples = random.sample(nodes.values(), sample_count)
-    for sample in samples:
-        print_node_data(sample, nodes)
-
-def sample_and_validate(dataset_dir, sample_count=20):
-    nodes = pickle.load(open(os.path.join(dataset_dir, 'data'), 'rb'))
-    labels = process_dataset.label_set(nodes)
-    nodes_for_labels = {lab:[] for lab in labels}
-    verdicts = {}
-    for node in nodes.values():
-        nodes_for_labels[node.label].append(node)
-    for lab in labels:
-        sample = random.sample(nodes_for_labels[lab], sample_count)
-        sample_verdicts = {}
-        print('Listing sample for label', lab)
-        print()
-        for node in sample:
-            print_node_data(node, nodes)
-            sample_verdicts[node.title] = input('Any problems? ')
-        verdicts[lab] = sample_verdicts
-        print('Finished label', lab)
-        print()
-    json.dump(verdicts, open(os.path.join(dataset_dir, 'sample_manual_check.txt'), 'w'), indent=2)
-    return verdicts
+def analyze(data_dir):
+    data = pickle.load(open(os.path.join(data_dir, 'rawdata.pickle'), 'rb'))
+    stats = analyze_nodes(data)
+    json.dump(stats, open(os.path.join(data_dir, 'analysis.txt'), 'w'), indent=4)
 
 if __name__ == '__main__':
-    data_dir = sys.argv[1]
-    data = pickle.load(open(os.path.join(data_dir, 'data'), 'rb'))
-    stats = full_analysis(data, include_prediction_baseline = False)
-    json.dump(stats, open(os.path.join(data_dir, 'analysis.txt'), 'w'), indent=4)
+    analyze(sys.argv[1])

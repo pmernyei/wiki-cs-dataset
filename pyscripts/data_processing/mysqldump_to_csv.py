@@ -94,19 +94,19 @@ def parse_values(values, outfile):
             writer.writerow(latest_row)
 
 
-def main():
+def dump_to_csv(input_filename, output_filename):
     """
     Parse arguments and start the program
     """
     try:
-        for line in open(sys.argv[1], encoding='utf-8', errors='replace'):
+        for line in open(input_filename, encoding='utf-8', errors='replace'):
             # Look for an INSERT statement and parse it.
             if is_insert(line):
                 values = get_values(line)
                 if values_sanity_check(values):
-                    parse_values(values, open(sys.argv[2], 'a+', encoding='utf-8', newline=''))
+                    parse_values(values, open(output_filename, 'a+', encoding='utf-8', newline=''))
     except KeyboardInterrupt:
         sys.exit(0)
 
 if __name__ == "__main__":
-    main()
+    dump_to_csv(sys.argv[1], sys.argv[2])

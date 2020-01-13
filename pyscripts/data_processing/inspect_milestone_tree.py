@@ -1,3 +1,7 @@
+"""
+Calculate stats about hierarchy of selected milestone categories and print the
+tree hierarchy structure.
+"""
 import csv
 import sys
 import json
@@ -5,6 +9,10 @@ import re
 import pandas as pd
 
 def get_category_sizes(page2cat_filename, output_filename=None):
+    """
+    Calculates how many pages are mapped to each category, optionally outputting
+    as a CSV file besides returning it as a dictionary.
+    """
 
     def file_len(fname):
         with open(fname) as f:
@@ -31,7 +39,12 @@ def get_category_sizes(page2cat_filename, output_filename=None):
 
     return counts
 
+
 def calculate_milestone_tree(subcats_filename, sizes_filename=None, page2cat_filename=None, out_filename=None):
+    """
+    Builds a tree based on the category parent relations, and calculates
+    statistics for subtrees.
+    """
     raw_sizes = {}
     parent = {}
     children = {}
@@ -87,13 +100,21 @@ def calculate_milestone_tree(subcats_filename, sizes_filename=None, page2cat_fil
         open(out_filename, 'w+', encoding='utf8').write(json.dumps(result))
     return result
 
+
 def get_all_descendants(root, children_map):
+    """
+    Returns all descendants in the tree of a given root node, recursively
+    visiting them based on the map from parents to children.
+    """
     return {root}.union(
         *[get_all_descendants(child, children_map) for child in children_map.get(root, [])]
     )
 
 
 def print_tree(root, milestone_tree, output=sys.stdout, indent_level=0):
+    """
+    Pretty prints the category hierarchy from a given root node.
+    """
     indent = '    ' * indent_level
     output.write(indent + '{} ({} pages, ~{} in subtree)'.format(
         root, milestone_tree['raw_sizes'].get(root, 0),
@@ -105,6 +126,7 @@ def print_tree(root, milestone_tree, output=sys.stdout, indent_level=0):
         output.write(indent + '}\n')
     else:
         output.write('\n')
+
 
 if __name__ == '__main__':
     calculate_milestone_tree(sys.argv[1], page2cat_filename=sys.argv[2], out_filename=sys.argv[3])

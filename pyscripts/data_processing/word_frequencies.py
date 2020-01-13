@@ -1,3 +1,8 @@
+"""
+Functions to calculate and process word frequencies across either the entire
+Wikipedia data or an extracted subgraph dataset, and plotting this data.
+"""
+
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -10,7 +15,11 @@ try:
 except LookupError:
     nltk.download('punkt')
 
+
 def get_entire_wiki_word_frequencies(text_extractor_data_dir, output=None):
+    """
+    Get frequencies of all words from extracted Wikipedia text.
+    """
     freqs = {}
     for root, dirs, files in os.walk(text_extractor_data_dir):
         for file in files:
@@ -26,14 +35,22 @@ def get_entire_wiki_word_frequencies(text_extractor_data_dir, output=None):
             json.dump(freqs, outfile, indent=1)
     return freqs
 
+
 def dataset_word_frequencies(nodes):
+    """
+    Get frequency of words from an extracted dataset.
+    """
     freqs = {}
     for node in nodes.values():
         for t in node.tokens:
             freqs[t.lower()] = freqs.get(t.lower(), 0) + 1
     return freqs
 
+
 def plot_frequencies(freqs, words, title=None):
+    """
+    Plot frequencies of the listed words, looking up from the given freqs dict.
+    """
     ys = np.array([freqs[w] for w in words])
 
     fig, ax = plt.subplots()
@@ -46,6 +63,7 @@ def plot_frequencies(freqs, words, title=None):
     plt.xticks(index, words, rotation=60, ha='right')
     plt.tight_layout()
     plt.show()
+
 
 def desc_frequency_list(freqs):
     l = sorted(freqs.items(), reverse=True, key=lambda x: x[1])
