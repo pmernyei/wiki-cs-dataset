@@ -131,7 +131,7 @@ def train_and_eval(data, model, split_idx, stopping_patience, lr, weight_decay,
         preds = preds*(1 - data.test_mask) - data.test_mask
         json.dump(preds.tolist(), open(preds_out,'w'))
 
-    return result_acc
+    return result_acc, epoch
 
 
 def main(args):
@@ -139,13 +139,15 @@ def main(args):
 
     if args.full_eval:
         results = []
+        epoch_counts = []
         for split_idx in range(len(data.train_masks)):
             for run_idx in range(args.runs_per_split):
                 model = create_model(args, data)
-                acc = train_and_eval(data, model, split_idx, args.patience,
+                acc, epochs = train_and_eval(data, model, split_idx, args.patience,
                     args.lr, args.weight_decay, args.test)
                 results.append(acc)
-                print('Split {} run {} accuracy: {:.4f}'.format(split_idx, run_idx, acc))
+                epoch_counts.append(epochs)
+                print('Split {} run {} accuracy: {:.4f} in {} epochs'.format(split_idx, run_idx, acc, epochs))
         results = np.array(results)
         avg = results.mean()
         bootstrap = sns.algorithms.bootstrap(
@@ -154,6 +156,7 @@ def main(args):
         uncertainty = np.max(np.abs(conf_int - avg))
         print('{} accuracy: {:.4f} ± {:.4f}'.format(
             'Test' if args.test else 'Validation', avg, uncertainty))
+        print('avg epochs: {}'.format(np.array(epoch_counts).mean()))
     else:
         model = create_model(args, data)
         acc = train_and_eval(data, model, args.split_idx, args.patience, args.lr,
