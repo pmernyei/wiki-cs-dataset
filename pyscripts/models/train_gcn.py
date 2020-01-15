@@ -117,15 +117,10 @@ def main(args):
                 dur.append(time.time() - t0)
 
             acc = evaluate(model, features, labels, val_mask)
-            print("Epoch {:05d} | Time(s) {:.4f} | Loss {:.4f} | Accuracy {:.4f} | "
-                  "ETputs(KTEPS) {:.2f}". format(epoch, np.mean(dur), loss.item(),
-                                                 acc, n_edges / np.mean(dur) / 1000))
-
-        print()
         acc = evaluate(model, features, labels, test_mask)
         print("Test accuracy {:.2%}".format(acc))
         results.append(acc)
-    print("Mean accuracy: {:.2%}".format(results.mean()))
+    print("Mean accuracy: {:.2%}".format(np.array(results).mean()))
 
 
 if __name__ == '__main__':
@@ -149,6 +144,7 @@ if __name__ == '__main__':
             help="graph self-loop (default=False)")
     parser.add_argument("--n-reruns", type=int, default=100,
             help="number of times to reinitialize and retrain")
+    parser.add_argument("--detail")
     parser.set_defaults(self_loop=False)
     args = parser.parse_args()
     print(args)
