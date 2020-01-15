@@ -126,7 +126,7 @@ def analyze_nodes(nodes):
 
 
 def analyze(data_dir):
-    data = pickle.load(open(os.path.join(data_dir, 'rawdata.pickle'), 'rb'))
+    data = pickle.load(open(os.path.join(data_dir, 'fulldata.pickle'), 'rb'))
     stats = analyze_nodes(data)
     json.dump(stats, open(os.path.join(data_dir, 'analysis.txt'), 'w'),
                 indent=4)
