@@ -8,9 +8,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from dgl import DGLGraph
-import dgl.data
 
-import load_dgl_data
+import load_graph_data
 from gcn import GCN
 from gat import GAT
 from appnp import APPNP
@@ -136,7 +135,7 @@ def train_and_eval(data, model, split_idx, stopping_patience, lr, weight_decay,
 
 
 def main(args):
-    data = load_dgl_data.load(args)
+    data = load_graph_data.load(args)
 
     if args.full_eval:
         results = []
@@ -166,7 +165,7 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='GNNs')
-    dgl.data.register_data_args(parser)
+    load_graph_data.register_data_args(parser)
 
     # Arguments for high level training loop behaviour
     parser.add_argument("--model", help="model to train")
@@ -190,8 +189,6 @@ if __name__ == '__main__':
             help="file for writin predictions on train/validation set for analysis")
 
     # Arguments applicable for multiple (not necessarily all) models
-    parser.add_argument("--gpu", type=int, default=-1,
-            help="gpu")
     parser.add_argument("--lr", type=float, default=1e-2,
             help="learning rate")
     parser.add_argument("--n-hidden", type=int, default=16,
@@ -202,9 +199,6 @@ if __name__ == '__main__':
             help="Weight for L2 loss")
     parser.add_argument("--dropout", type=float, default=0.5,
             help="dropout probability")
-    parser.add_argument("--self-loop", action='store_true',
-            help="graph self-loop (default=False)")
-    parser.set_defaults(self_loop=False)
     parser.add_argument("--in-drop", type=float, default=.6,
                         help="input feature dropout")
 

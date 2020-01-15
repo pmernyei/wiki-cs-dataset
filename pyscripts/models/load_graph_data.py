@@ -126,3 +126,13 @@ def load(args):
         norm = norm.cuda()
     data.graph.ndata['norm'] = norm.unsqueeze(1)
     return data
+
+
+def register_data_args(parser):
+    dgl.data.register_data_args(parser)
+    parser.add_argument("--gpu", type=int, default=-1,
+            help="gpu")
+    parser.add_argument("--self-loop", action='store_true',
+            help="graph self-loop (default=False)")
+    parser.set_defaults(self_loop=False)
+    

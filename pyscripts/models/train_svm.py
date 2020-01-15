@@ -2,27 +2,33 @@ import numpy as np
 from sklearn.svm import SVC
 import json
 import sys
+import argparse
 
-def fit_svm(vector_file, C=1.0, test=False):
-    data = json.load(open(vector_file))
-    all_x = np.array(data['features'])
-    all_y = np.array(data['labels'])
-    splits = np.array(data['splits'])
-    train_x = all_x[splits == 0]
-    train_y = all_y[splits == 0]
-    validate_x = all_x[splits == 1]
-    validate_y = all_y[splits == 1]
-    svm = SVC(C=C, kernel='linear')
-    svm.fit(train_x, train_y)
+import load_graph_data
 
-    acc = svm.score(validate_x, validate_y)
-    print('Validation accuracy:', acc)
-    if test:
-        test_x = all_x[splits == 2]
-        test_y = all_y[splits == 2]
-        acc = svm.score(test_x, test_y)
-        print('Test accuracy:', acc)
+
+def fit_svm(data, C=1.0, test=False):
+    acc_sum = 0
+    for i in range(len(data.train_masks)):
+        svm = SVC(C=C, kernel='linear')
+        tr = data.train_masks[i]
+        val = data.val_masks[i]
+        svm.fit(data.features[tr], data.labels[tr])
+        acc = svm.score(data.features[val], data.labels[val])
+        print('Validation accuracy:', acc)
+        if test:
+            acc = svm.score(data.features[data.test_mask],
+                            data.labels[data.test_mask])
+            print('Test accuracy:', acc)
+        acc_sum += acc
+    print('Avg {} accuracy: {:.4f}'.format('test' if test else 'val', acc))
 
 
 if __name__ == '__main__':
-    fit_svm(sys.argv[1], test=('--test' in sys.argv))
+    parser = argparse.ArgumentParser(description='SVM training')
+    load_graph_data.register_data_args(parser)
+    parser.add_argument("--test", action='store_true',
+            help="evaluate on test set after training (default=False)")
+    args = parser.parse_args()
+    data = load_graph_data.load(args)
+    fit_svm(data, test=args.test)
