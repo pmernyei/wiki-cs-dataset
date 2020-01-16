@@ -22,7 +22,7 @@ def gat_model_fn(args, data):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='GCN')
+    parser = argparse.ArgumentParser(description='GAT')
     register_general_args(parser)
     parser.add_argument("--n-hidden", type=int, default=16,
             help="number of hidden gcn units")

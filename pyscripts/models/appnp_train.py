@@ -19,7 +19,7 @@ def appnp_model_fn(args, data):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='GCN')
+    parser = argparse.ArgumentParser(description='APPNP')
     register_general_args(parser)
     parser.add_argument("--in-drop", type=float, default=0.5,
                         help="input feature dropout")
