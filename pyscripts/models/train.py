@@ -105,7 +105,7 @@ def train_and_eval(data, model, split_idx, stopping_patience, lr, weight_decay,
         if stopping_acc > max_acc:
             max_acc = stopping_acc
             patience_left = stopping_patience
-            best_vars = { key: value.cpu() for key, value in model.state_dict().items()}
+            best_vars = { key: value.clone() for key, value in model.state_dict().items()}
         else:
             patience_left -= 1
 
