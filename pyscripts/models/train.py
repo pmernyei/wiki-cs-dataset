@@ -11,7 +11,7 @@ from dgl import DGLGraph
 
 import load_graph_data
 
-def evaluate(model, features, labels, mask):
+def evaluate(model, features, labels, mask, loss_fcn=None):
     model.eval()
     with torch.no_grad():
         logits = model(features)
@@ -19,7 +19,11 @@ def evaluate(model, features, labels, mask):
         labels = labels[mask]
         _, indices = torch.max(logits, dim=1)
         correct = torch.sum(indices == labels)
-        return correct.item() * 1.0 / len(labels)
+        acc = correct.item() * 1.0 / len(labels)
+        if loss_fcn is None:
+            return acc
+        else:
+            return acc, loss_fcn(logits, labels)
 
 
 def train_and_eval_once(data, model, split_idx, stopping_patience, lr,
@@ -51,28 +55,45 @@ def train_and_eval_once(data, model, split_idx, stopping_patience, lr,
         if epoch >= 3:
             dur.append(time.time() - t0)
 
-        train_acc = evaluate(model, data.features, data.labels, data.train_masks[split_idx])
-        stopping_acc = evaluate(model, data.features, data.labels, data.stopping_masks[split_idx])
+        train_acc = evaluate(
+            model, data.features, data.labels, data.train_masks[split_idx]
+        )
+        stopping_acc = evaluate(
+            model, data.features, data.labels, data.stopping_masks[split_idx]
+        )
         if stopping_acc > max_acc:
             max_acc = stopping_acc
             patience_left = stopping_patience
-            best_vars = { key: value.clone() for key, value in model.state_dict().items()}
+            best_vars = {
+                key: value.clone()
+                for key, value in model.state_dict().items()
+            }
         else:
             patience_left -= 1
 
         if log_details:
-            print("Epoch {:05d} | Time(s) {:.4f} | Loss {:.4f} | Train acc {:.2%} | "
-                  "Val acc {:.2%} | ETputs(KTEPS) {:.2f}". format(
-                    epoch, np.mean(dur), loss.item(), train_acc, stopping_acc,
-                    data.n_edges / np.mean(dur) / 1000))
+            print("Epoch {:05d} | Time(s) {:.4f} | Loss {:.4f} | "
+                  "Train acc {:.2%} | Val acc {:.2%} | ETputs(KTEPS) {:.2f}"
+                    .format(epoch, np.mean(dur), loss.item(), train_acc,
+                    stopping_acc, data.n_edges / np.mean(dur) / 1000))
         epoch += 1
 
     model.load_state_dict(best_vars)
-
+    result = { 'epochs': epoch }
+    result['train_acc'], result['train_loss'] = evaluate(
+        model, data.features, data.labels,
+        data.train_masks[split_idx], loss_fcn
+    )
     if test:
-        result_acc = evaluate(model, data.features, data.labels, data.test_mask)
+        result['val_acc'], result['val_loss'] = evaluate(
+            model, data.features, data.labels,
+            data.test_mask, loss_fcn
+        )
     else:
-        result_acc = evaluate(model, data.features, data.labels, data.val_masks[split_idx])
+        result['val_acc'], result['val_loss'] = evaluate(
+            model, data.features, data.labels,
+            data.val_masks[split_idx], loss_fcn
+        )
 
     if preds_out is not None:
         mask = 1 - data.test_mask
@@ -82,30 +103,56 @@ def train_and_eval_once(data, model, split_idx, stopping_patience, lr,
         preds = preds*(1 - data.test_mask) - data.test_mask
         json.dump(preds.tolist(), open(preds_out,'w'))
 
-    return result_acc
+    return result
 
 
-def train_and_eval(model_fn, args):
+def mean_with_uncertainty(values, n_boot, conf_threshold):
+    values = np.array(values)
+    avg = values.mean()
+    bootstrap = sns.algorithms.bootstrap(
+        values, func=np.mean, n_boot=n_boot)
+    conf_int = sns.utils.ci(bootstrap, conf_threshold)
+    return avg, np.max(np.abs(conf_int - avg))
+
+
+def train_and_eval(model_fn, args, result_callback=None):
     data = load_graph_data.load(args)
-    results = []
+    train_accs = []
+    train_losses = []
+    val_accs = []
+    val_losses = []
+    epoch_counts = []
     for split_idx in range(len(data.train_masks)):
         for run_idx in range(args.runs_per_split):
             model = model_fn(args, data)
             if args.gpu >= 0:
                 model.cuda()
-            acc = train_and_eval_once(data, model, split_idx, args.patience,
+            res = train_and_eval_once(data, model, split_idx, args.patience,
                 args.lr, args.weight_decay, args.test, log_details=args.verbose)
-            results.append(acc)
+            train_accs.append([res['train_acc']])
+            train_losses.append(res['train_loss'])
+            val_accs.append(res['val_acc'])
+            val_losses.append(res['val_loss'])
+            epoch_counts.append(res['epochs'])
             print('Split {} run {} accuracy: {:.2%}'
-                    .format(split_idx, run_idx, acc))
-    results = np.array(results)
-    avg = results.mean()
-    bootstrap = sns.algorithms.bootstrap(
-        results, func=np.mean, n_boot=args.n_boot)
-    conf_int = sns.utils.ci(bootstrap, args.conf_int)
-    uncertainty = np.max(np.abs(conf_int - avg))
+                    .format(split_idx, run_idx, res['val_acc']))
+    mean_val_acc, val_acc_uncertainty = mean_with_uncertainty(val_accs,
+        args.n_boot, args.conf_int)
+    mean_val_loss, val_loss_uncertainty = mean_with_uncertainty(val_losses,
+        args.n_boot, args.conf_int)
     print('{} accuracy: {:.2%} ± {:.2%}'.format(
-        'Test' if args.test else 'Validation', avg, uncertainty))
+        'Test' if args.test else 'Validation',
+        mean_val_acc, val_acc_uncertainty))
+    if result_callback is not None:
+        result_callback(objective=mean_val_acc,
+                        context={
+                            'train_acc': np.array(train_accs).mean(),
+                            'train_loss': np.array(train_losses).mean(),
+                            'epochs': np.carray(epoch_counts).mean(),
+                            'val_acc_uncertainty': val_acc_uncertainty,
+                            'val_loss': mean_val_loss,
+                            'val_loss_uncertainty': val_loss_uncertainty
+                        })
 
 
 def register_general_args(parser):
