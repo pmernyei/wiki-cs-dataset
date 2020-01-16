@@ -1,19 +1,19 @@
 import argparse
-import torch.nn.functional as F
+import torch.nn as nn
 
 from train import train_and_eval
 from train import register_general_args
-from gcn import GCN
 
 
-def gcn_model_fn(args, data):
-    return GCN(data.graph,
-                data.n_feats,
-                args.n_hidden,
-                data.n_classes,
-                args.n_layers,
-                F.relu,
-                args.dropout)
+def mlp_model_fn(args, data):
+    layers = []
+    layers.append(nn.Linear(data.n_feats, args.n_hidden))
+    for i in range(args.n_layers - 1):
+        layers.append(nn.Linear(args.n_hidden, args.n_hidden))
+        if dropout > 0:
+            layers.append(nn.Dropout(p=args.dropout))
+    layers.append(nn.Linear(args.n_hidden, data.n_classes))
+    return nn.Sequential(*layers)
 
 
 if __name__ == '__main__':
@@ -28,4 +28,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print('Parsed args:', args)
 
-    train_and_eval(gcn_model_fn, args)
+    train_and_eval(mlp_model_fn, args)
