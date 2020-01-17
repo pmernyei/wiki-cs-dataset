@@ -151,7 +151,7 @@ def train_and_eval(model_fn, data, args, result_callback=None):
                         context={
                             'train_acc': np.array(train_accs).mean(),
                             'train_loss': np.array(train_losses).mean(),
-                            'epochs': np.carray(epoch_counts).mean(),
+                            'epochs': np.array(epoch_counts).mean(),
                             'val_acc_uncertainty': val_acc_uncertainty,
                             'val_loss': mean_val_loss,
                             'val_loss_uncertainty': val_loss_uncertainty
