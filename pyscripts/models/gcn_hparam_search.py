@@ -43,3 +43,4 @@ if __name__ == '__main__':
                                               context=context))
         train_and_eval(gcn_model_fn, data, args, callback)
         study.finalize(trial)
+    study.save()
