@@ -23,7 +23,7 @@ def evaluate(model, features, labels, mask, loss_fcn=None):
         if loss_fcn is None:
             return acc
         else:
-            return acc, loss_fcn(logits, labels)
+            return acc, loss_fcn(logits, labels).numpy().mean()
 
 
 def train_and_eval_once(data, model, split_idx, stopping_patience, lr,
@@ -122,7 +122,11 @@ def train_and_eval(model_fn, args, result_callback=None):
     val_accs = []
     val_losses = []
     epoch_counts = []
-    for split_idx in range(max(args.max_splits, len(data.train_masks))):
+    if args.max_splits is None or len(data.train_masks) <= args.max_splits:
+        splits = len(data.train_masks)
+    else:
+        splits = args.max_splits
+    for split_idx in range(splits):
         for run_idx in range(args.runs_per_split):
             model = model_fn(args, data)
             if args.gpu >= 0:
