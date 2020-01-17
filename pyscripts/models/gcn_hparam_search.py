@@ -11,6 +11,7 @@ from gcn_train import register_gcn_args
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='GCN hparam search')
+    register_data_args(parser)
     register_general_args(parser)
     register_gcn_args(parser)
     parser.add_argument('--study-dir', help='file to write study results to')
