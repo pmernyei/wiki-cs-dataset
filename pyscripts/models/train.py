@@ -23,7 +23,7 @@ def evaluate(model, features, labels, mask, loss_fcn=None):
         if loss_fcn is None:
             return acc
         else:
-            return acc, loss_fcn(logits, labels).numpy().mean()
+            return acc, loss_fcn(logits, labels).cpu().numpy().mean()
 
 
 def train_and_eval_once(data, model, split_idx, stopping_patience, lr,
