@@ -27,7 +27,6 @@ if __name__ == '__main__':
                  algorithm=algorithm,
                  lower_is_better=False,
                  disable_dashboard=True,
-                 random_seed=42,
                  output_dir=args.study_dir)
 
     for trial in study:
