@@ -30,9 +30,12 @@ if __name__ == '__main__':
                  algorithm=algorithm,
                  lower_is_better=False,
                  disable_dashboard=True,
+                 random_seed=42,
                  output_dir=args.study_dir)
 
     for trial in study:
+        print('Starting trial {} with params {}'.format(
+            trial.id, trial.parameters))
         args.lr = trial.parameters['lr']
         args.n_hidden = trial.parameters['num_hidden_units']
         args.attn_drop = trial.parameters['attn_drop']
