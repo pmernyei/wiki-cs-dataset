@@ -31,8 +31,8 @@ if __name__ == '__main__':
 
     for trial in study:
         args.lr = trial.parameters['lr']
-        args.n_hidden = trials.parameters['num_hidden_units']
-        args.dropout = trials.parameters['dropout']
+        args.n_hidden = trial.parameters['num_hidden_units']
+        args.dropout = trial.parameters['dropout']
         callback = (lambda objective, context:
                         study.add_observation(trial=trial,
                                               objective=objective,

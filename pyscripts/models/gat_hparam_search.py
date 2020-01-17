@@ -34,12 +34,12 @@ if __name__ == '__main__':
 
     for trial in study:
         args.lr = trial.parameters['lr']
-        args.n_hidden = trials.parameters['num_hidden_units']
-        args.attn_drop = trials.parameters['attn_drop']
-        args.in_drop = trials.parameters['in_drop']
-        args.residual = trials.parameters['residual']
-        args.num_heads = trials.parameters['num_heads']
-        args.num_out_heads = trials.parameters['num_out_heads']
+        args.n_hidden = trial.parameters['num_hidden_units']
+        args.attn_drop = trial.parameters['attn_drop']
+        args.in_drop = trial.parameters['in_drop']
+        args.residual = trial.parameters['residual']
+        args.num_heads = trial.parameters['num_heads']
+        args.num_out_heads = trial.parameters['num_out_heads']
         callback = (lambda objective, context:
                         study.add_observation(trial=trial,
                                               objective=objective,
