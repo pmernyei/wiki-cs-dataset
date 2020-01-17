@@ -2,7 +2,6 @@ import argparse
 import torch.nn.functional as F
 
 import load_graph_data
-from load_graph_data import register_data_args
 from train import train_and_eval
 from train import register_general_args
 from appnp import APPNP
@@ -35,7 +34,6 @@ def register_appnp_args(parser):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='APPNP')
-    register_data_args(parser)
     register_general_args(parser)
     register_appnp_args(parser)
     args = parser.parse_args()

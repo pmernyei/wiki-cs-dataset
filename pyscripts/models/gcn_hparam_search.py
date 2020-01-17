@@ -2,7 +2,6 @@ import sherpa
 import argparse
 
 import load_graph_data
-from load_graph_data import register_data_args
 from train import train_and_eval
 from train import register_general_args
 from gcn_train import gcn_model_fn
@@ -11,7 +10,6 @@ from gcn_train import register_gcn_args
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='GCN hparam search')
-    register_data_args(parser)
     register_general_args(parser)
     register_gcn_args(parser)
     parser.add_argument('--study-dir', help='file to write study results to')
