@@ -22,7 +22,7 @@ def gat_model_fn(args, data):
                 args.residual)
 
 
-def register_gcn_args(parser):
+def register_gat_args(parser):
     parser.add_argument("--n-hidden", type=int, default=16,
             help="number of hidden gcn units")
     parser.add_argument("--n-layers", type=int, default=1,
