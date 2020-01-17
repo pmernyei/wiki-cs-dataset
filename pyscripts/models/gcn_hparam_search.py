@@ -1,6 +1,8 @@
 import sherpa
 import argparse
 
+import load_graph_data
+from load_graph_data import register_data_args
 from train import train_and_eval
 from train import register_general_args
 from gcn_train import gcn_model_fn
@@ -28,7 +30,7 @@ if __name__ == '__main__':
                  lower_is_better=False,
                  disable_dashboard=True,
                  output_dir=args.study_dir)
-
+    data = load_graph_data.load(args)
     for trial in study:
         print('Starting trial {} with params {}'.format(
             trial.id, trial.parameters))
@@ -39,5 +41,5 @@ if __name__ == '__main__':
                         study.add_observation(trial=trial,
                                               objective=objective,
                                               context=context))
-        train_and_eval(gcn_model_fn, args)
+        train_and_eval(gcn_model_fn, data, args, callback)
         study.finalize(trial)

@@ -1,6 +1,8 @@
 import sherpa
 import argparse
 
+import load_graph_data
+from load_graph_data import register_data_args
 from train import train_and_eval
 from train import register_general_args
 from gat_train import gat_model_fn
@@ -9,6 +11,7 @@ from gat_train import register_gat_args
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='GCN hparam search')
+    register_data_args(parser)
     register_general_args(parser)
     register_gat_args(parser)
     parser.add_argument('--study-dir', help='file to write study results to')
@@ -32,6 +35,7 @@ if __name__ == '__main__':
                  lower_is_better=False,
                  disable_dashboard=True,
                  output_dir=args.study_dir)
+    data = load_graph_data.load(args)
 
     for trial in study:
         print('Starting trial {} with params {}'.format(
@@ -47,5 +51,5 @@ if __name__ == '__main__':
                         study.add_observation(trial=trial,
                                               objective=objective,
                                               context=context))
-        train_and_eval(gat_model_fn, args)
+        train_and_eval(gat_model_fn, data, args, callback)
         study.finalize(trial)

@@ -1,9 +1,12 @@
 import argparse
 import torch.nn.functional as F
 
+import load_graph_data
+from load_graph_data import register_data_args
 from train import train_and_eval
 from train import register_general_args
 from gcn import GCN
+
 
 
 def gcn_model_fn(args, data):
@@ -27,9 +30,10 @@ def register_gcn_args(parser):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='GCN')
+    register_data_args(parser)
     register_general_args(parser)
     register_gcn_args(parser)
     args = parser.parse_args()
     print('Parsed args:', args)
 
-    train_and_eval(gcn_model_fn, args)
+    train_and_eval(gcn_model_fn, load_graph_data.load(args), args)

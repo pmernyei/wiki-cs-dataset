@@ -9,8 +9,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from dgl import DGLGraph
 
-import load_graph_data
-
 def evaluate(model, features, labels, mask, loss_fcn=None):
     model.eval()
     with torch.no_grad():
@@ -115,8 +113,7 @@ def mean_with_uncertainty(values, n_boot, conf_threshold):
     return avg, np.max(np.abs(conf_int - avg))
 
 
-def train_and_eval(model_fn, args, result_callback=None):
-    data = load_graph_data.load(args)
+def train_and_eval(model_fn, data, args, result_callback=None):
     train_accs = []
     train_losses = []
     val_accs = []
@@ -160,7 +157,6 @@ def train_and_eval(model_fn, args, result_callback=None):
 
 
 def register_general_args(parser):
-    load_graph_data.register_data_args(parser)
     parser.add_argument('--patience', type=int, default=100,
             help='epochs to train before giving up if accuracy does not '
                  'improve')
@@ -185,3 +181,5 @@ def register_general_args(parser):
             help='Weight for L2 loss')
     parser.add_argument('--verbose', action='store_true',
             help='Print performance after each epoch')
+    parser.add_argument("--gpu", type=int, default=-1,
+            help="gpu")

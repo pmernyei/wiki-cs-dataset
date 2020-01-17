@@ -1,6 +1,8 @@
 import argparse
 import torch.nn as nn
 
+import load_graph_data
+from load_graph_data import register_data_args
 from train import train_and_eval
 from train import register_general_args
 
@@ -18,6 +20,7 @@ def mlp_model_fn(args, data):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='GCN')
+    register_data_args(parser)
     register_general_args(parser)
     parser.add_argument("--n-hidden", type=int, default=16,
             help="number of hidden gcn units")
@@ -28,4 +31,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print('Parsed args:', args)
 
-    train_and_eval(mlp_model_fn, args)
+    train_and_eval(mlp_model_fn, load_graph_data.load(args), args)
