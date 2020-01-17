@@ -12,7 +12,8 @@ if __name__ == '__main__':
     register_general_args(parser)
     register_gcn_args(parser)
     parser.add_argument('--study-dir', help='file to write study results to')
-    parser.add_argument('--n-trials', help='number of trials to run')
+    parser.add_argument('--n-trials', type=int, default=100,
+        help='number of trials to run')
     args = parser.parse_args()
     print('Parsed args:', args)
 
