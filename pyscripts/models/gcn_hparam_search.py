@@ -31,6 +31,7 @@ if __name__ == '__main__':
                  disable_dashboard=True,
                  output_dir=args.study_dir)
     data = load_graph_data.load(args)
+
     for trial in study:
         print('Starting trial {} with params {}'.format(
             trial.id, trial.parameters))
