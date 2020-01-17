@@ -18,9 +18,7 @@ def appnp_model_fn(args, data):
                   args.k)
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='APPNP')
-    register_general_args(parser)
+def register_appnp_args(parser):
     parser.add_argument("--in-drop", type=float, default=0.5,
                         help="input feature dropout")
     parser.add_argument("--edge-drop", type=float, default=0.5,
@@ -31,6 +29,12 @@ if __name__ == '__main__':
                         help="Teleport Probability")
     parser.add_argument("--hidden_sizes", type=int, nargs='+', default=[64],
                         help="hidden unit sizes for appnp")
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='APPNP')
+    register_general_args(parser)
+    register_appnp_args(parser)
     args = parser.parse_args()
     print('Parsed args:', args)
 

@@ -3,14 +3,14 @@ import argparse
 
 from train import train_and_eval
 from train import register_general_args
-from gcn_train import gcn_model_fn
-from gcn_train import register_gcn_args
+from gat_train import gat_model_fn
+from gat_train import register_gat_args
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='GCN hparam search')
     register_general_args(parser)
-    register_gcn_args(parser)
+    register_gat_args(parser)
     parser.add_argument('--study-dir', help='file to write study results to')
     parser.add_argument('--n-trials', help='number of trials to run')
     args = parser.parse_args()
@@ -18,8 +18,12 @@ if __name__ == '__main__':
 
     parameters = [
         sherpa.Continuous(name='lr', range=[1e-3, 1e-1], scale='log'),
-        sherpa.Continuous(name='dropout', range=[0.2, 0.8]),
-        sherpa.Discrete(name='num_hidden_units', range=[5, 50], scale='log')
+        sherpa.Continuous(name='in_drop', range=[0.2, 0.8]),
+        sherpa.Continuous(name='attn_drop', range=[0.2, 0.8]),
+        sherpa.Discrete(name='num_hidden_units', range=[12, 20], scale='log'),
+        sherpa.Choice(name='residual', range=[True, False]),
+        sherpa.Discrete(name='num_heads', range=[4, 16], scale='log'),
+        sherpa.Discrete(name='num_out_heads', range=[1, 4], scale='log')
     ]
     algorithm = sherpa.algorithms.RandomSearch(max_num_trials=args.n_trials)
     study = sherpa.Study(parameters=parameters,
@@ -31,10 +35,14 @@ if __name__ == '__main__':
     for trial in study:
         args.lr = trial.parameters['lr']
         args.n_hidden = trials.parameters['num_hidden_units']
-        args.dropout = trials.parameters['dropout']
+        args.attn_drop = trials.parameters['attn_drop']
+        args.in_drop = trials.parameters['in_drop']
+        args.residual = trials.parameters['residual']
+        args.num_heads = trials.parameters['num_heads']
+        args.num_out_heads = trials.parameters['num_out_heads']
         callback = (lambda objective, context:
                         study.add_observation(trial=trial,
                                               objective=objective,
                                               context=context))
-        train_and_eval(gcn_model_fn, args)
+        train_and_eval(gat_model_fn, args)
         study.finalize(trial)
