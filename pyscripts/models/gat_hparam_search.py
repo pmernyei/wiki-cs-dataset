@@ -1,5 +1,7 @@
 import sherpa
 import argparse
+import os
+import json
 
 import load_graph_data
 from train import train_and_eval
@@ -17,17 +19,19 @@ if __name__ == '__main__':
         help='number of trials to run')
     args = parser.parse_args()
     print('Parsed args:', args)
+    with open(os.path.join(args.study_dir, 'args.json'), 'w') as out:
+        json.dump(args.vars(), out)
 
     parameters = [
         sherpa.Continuous(name='lr', range=[1e-3, 1e-1], scale='log'),
-        sherpa.Continuous(name='in_drop', range=[0.2, 0.8]),
-        sherpa.Continuous(name='attn_drop', range=[0.2, 0.8]),
+        sherpa.Continuous(name='dropout', range=[0.2, 0.8]),
         sherpa.Discrete(name='num_hidden_units', range=[12, 20], scale='log'),
         sherpa.Choice(name='residual', range=[True, False]),
-        sherpa.Discrete(name='num_heads', range=[4, 16], scale='log'),
-        sherpa.Discrete(name='num_out_heads', range=[1, 4], scale='log')
+        sherpa.Discrete(name='num_heads', range=[4,8], scale='log'),
+        sherpa.Discrete(name='num_out_heads', range=[1], scale='log'),
+        sherpa.Discrete(name='num_layers', range=[1,2])
     ]
-    algorithm = sherpa.algorithms.RandomSearch(max_num_trials=args.n_trials)
+    algorithm = sherpa.algorithms.GPyOpt(max_num_trials=args.n_trials)
     study = sherpa.Study(parameters=parameters,
                  algorithm=algorithm,
                  lower_is_better=False,
@@ -40,11 +44,12 @@ if __name__ == '__main__':
             trial.id, trial.parameters))
         args.lr = trial.parameters['lr']
         args.n_hidden = trial.parameters['num_hidden_units']
-        args.attn_drop = trial.parameters['attn_drop']
-        args.in_drop = trial.parameters['in_drop']
+        args.attn_drop = trial.parameters['dropout']
+        args.in_drop = trial.parameters['dropout']
         args.residual = trial.parameters['residual']
         args.num_heads = trial.parameters['num_heads']
         args.num_out_heads = trial.parameters['num_out_heads']
+        args.n_layers = trial.parameters['num_layers']
         callback = (lambda objective, context:
                         study.add_observation(trial=trial,
                                               objective=objective,
