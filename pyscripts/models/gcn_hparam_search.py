@@ -39,7 +39,7 @@ if __name__ == '__main__':
         print('Starting trial {} with params {}'.format(
             trial.id, trial.parameters))
         args.lr = trial.parameters['lr']
-        args.n_hidden = trial.parameters['num_hidden_units']
+        args.n_hidden = int(trial.parameters['num_hidden_units'])
         args.dropout = trial.parameters['dropout']
         callback = (lambda objective, context:
                         study.add_observation(trial=trial,
