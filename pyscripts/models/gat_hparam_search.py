@@ -20,7 +20,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print('Parsed args:', args)
     with open(os.path.join(args.study_dir, 'args.json'), 'w') as out:
-        json.dump(args.vars(), out)
+        json.dump(vars(args), out)
 
     parameters = [
         sherpa.Continuous(name='lr', range=[1e-3, 1e-1], scale='log'),
