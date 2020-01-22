@@ -28,7 +28,6 @@ if __name__ == '__main__':
         sherpa.Discrete(name='num_hidden_units', range=[12, 20], scale='log'),
         sherpa.Choice(name='residual', range=[True, False]),
         sherpa.Discrete(name='num_heads', range=[4,8], scale='log'),
-        sherpa.Discrete(name='num_out_heads', range=[1], scale='log'),
         sherpa.Discrete(name='num_layers', range=[1,2])
     ]
     algorithm = sherpa.algorithms.GPyOpt(max_num_trials=args.n_trials)
@@ -48,7 +47,6 @@ if __name__ == '__main__':
         args.in_drop = trial.parameters['dropout']
         args.residual = trial.parameters['residual']
         args.num_heads = int(trial.parameters['num_heads'])
-        args.num_out_heads = int(trial.parameters['num_out_heads'])
         args.n_layers = int(trial.parameters['num_layers'])
         callback = (lambda objective, context:
                         study.add_observation(trial=trial,
