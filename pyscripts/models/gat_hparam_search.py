@@ -43,13 +43,13 @@ if __name__ == '__main__':
         print('Starting trial {} with params {}'.format(
             trial.id, trial.parameters))
         args.lr = trial.parameters['lr']
-        args.n_hidden = trial.parameters['num_hidden_units']
+        args.n_hidden = int(trial.parameters['num_hidden_units'])
         args.attn_drop = trial.parameters['dropout']
         args.in_drop = trial.parameters['dropout']
         args.residual = trial.parameters['residual']
-        args.num_heads = trial.parameters['num_heads']
-        args.num_out_heads = trial.parameters['num_out_heads']
-        args.n_layers = trial.parameters['num_layers']
+        args.num_heads = int(trial.parameters['num_heads'])
+        args.num_out_heads = int(trial.parameters['num_out_heads'])
+        args.n_layers = int(trial.parameters['num_layers'])
         callback = (lambda objective, context:
                         study.add_observation(trial=trial,
                                               objective=objective,
