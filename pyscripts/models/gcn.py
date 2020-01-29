@@ -7,6 +7,7 @@ References:
 import torch
 import torch.nn as nn
 from dgl.nn.pytorch import GraphConv
+import dgl.function as fn
 
 class GCN(nn.Module):
     def __init__(self,
@@ -29,10 +30,17 @@ class GCN(nn.Module):
         self.layers.append(GraphConv(n_hidden, n_classes))
         self.dropout = nn.Dropout(p=dropout)
 
+
     def forward(self, features):
         h = features
-        for i, layer in enumerate(self.layers):
+        for i, layer in enumerate(self.layers[:-1]):
             if i != 0:
                 h = self.dropout(h)
             h = layer(self.g, h)
+        self.last_embeddings = h
+        h = self.dropout(h)
+        h = self.layers[-1](self.g, h)
         return h
+
+    def get_last_embeddings(self):
+        return self.last_embeddings

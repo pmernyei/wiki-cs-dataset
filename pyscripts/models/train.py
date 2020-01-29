@@ -2,32 +2,67 @@ import argparse, time
 import numpy as np
 import seaborn as sns
 import json
+import os
 import itertools
 import networkx as nx
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.utils.tensorboard import SummaryWriter
 from dgl import DGLGraph
 
 from load_graph_data import register_data_args
+
+
+def accuracy(logits, labels, mask=None):
+    if mask is not None:
+        logits = logits[mask]
+        labels = labels[mask]
+    _, indices = torch.max(logits, dim=1)
+    correct = torch.sum(indices == labels)
+    acc = correct.item() * 1.0 / len(labels)
+    return acc
+
+
+def loss_scalar(logits, labels, mask, loss_fcn):
+    if mask is not None:
+        logits = logits[mask]
+        labels = labels[mask]
+    return loss_fcn(logits, labels).cpu().numpy().mean()
+
 
 def evaluate(model, features, labels, mask, loss_fcn=None):
     model.eval()
     with torch.no_grad():
         logits = model(features)
-        logits = logits[mask]
-        labels = labels[mask]
-        _, indices = torch.max(logits, dim=1)
-        correct = torch.sum(indices == labels)
-        acc = correct.item() * 1.0 / len(labels)
+        acc = accuracy(logits, labels, mask)
         if loss_fcn is None:
             return acc
         else:
-            return acc, loss_fcn(logits, labels).cpu().numpy().mean()
+            return acc, loss_scalar(logits, labels, mask, loss_fcn)
+
+
+def compile_metadata(data, split_idx, text_metadata=None):
+    labels = data.labels.cpu().tolist()
+    splits = ['train' if data.train_masks[split_idx][i] else
+              'stopping' if data.stopping_masks[split_idx][i] else
+              'val' if data.val_masks[split_idx][i] else
+              'test' for i in range(len(data.features))]
+    ids = range(len(data.features))
+    metadata_header = ['id', 'label_id', 'split']
+    if text_metadata is not None:
+        label_names = [text_metadata['labels'][lab] for lab in labels]
+        node_names = [text_metadata['nodes'][id]['title'] for id in ids]
+        metadata_header += ['label_names', 'node_names']
+        return (metadata_header,
+            list(zip(ids, labels, splits, label_names, node_names)))
+    else:
+        return (metadata_header, list(zip(ids, labels, splits)))
 
 
 def train_and_eval_once(data, model, split_idx, stopping_patience, lr,
-                weight_decay, test=False, preds_out=None, log_details=False):
+                weight_decay, test=False, preds_out=None, log_details=False,
+                output_dir=None, embedding_log_freq=40, text_metadata=None):
     dur = []
     max_acc = 0
     patience_left = stopping_patience
@@ -39,11 +74,21 @@ def train_and_eval_once(data, model, split_idx, stopping_patience, lr,
                                  lr=lr,
                                  weight_decay=weight_decay)
 
+    metadata_header, metadata = compile_metadata(
+        data, split_idx, text_metadata)
+
+    writer = None
+    if output_dir is not None:
+        writer = SummaryWriter(output_dir)
+        writer.add_graph(model, data.features)
+        writer.add_embedding(data.features, metadata_header=metadata_header, metadata=metadata, tag='features')
+
+
     while patience_left > 0:
         model.train()
         if epoch >= 3:
             t0 = time.time()
-        # forward
+
         logits = model(data.features)
         loss = loss_fcn(logits[data.train_masks[split_idx]],
                         data.labels[data.train_masks[split_idx]])
@@ -55,12 +100,23 @@ def train_and_eval_once(data, model, split_idx, stopping_patience, lr,
         if epoch >= 3:
             dur.append(time.time() - t0)
 
-        train_acc = evaluate(
-            model, data.features, data.labels, data.train_masks[split_idx]
-        )
-        stopping_acc = evaluate(
-            model, data.features, data.labels, data.stopping_masks[split_idx]
-        )
+        train_acc = accuracy(logits, data.labels, mask=data.train_masks[split_idx])
+        train_loss = loss.cpu().detach().numpy().mean()
+
+        model.eval()
+        with torch.no_grad():
+            eval_logits = model(data.features)
+            stopping_acc = accuracy(eval_logits, data.labels,
+                                    data.stopping_masks[split_idx])
+            stopping_loss = loss_scalar(eval_logits, data.labels,
+                                        data.stopping_masks[split_idx], loss_fcn)
+            val_acc = accuracy(eval_logits, data.labels, data.val_masks[split_idx])
+            val_loss = loss_scalar(eval_logits, data.labels,
+                                   data.val_masks[split_idx], loss_fcn)
+            if test:
+                test_acc = accuracy(eval_logits, data.labels, data.test_mask)
+                test_loss = loss_scalar(eval_logits, data.labels, data.test_mask, loss_fcn)
+
         if stopping_acc > max_acc:
             max_acc = stopping_acc
             patience_left = stopping_patience
@@ -70,6 +126,24 @@ def train_and_eval_once(data, model, split_idx, stopping_patience, lr,
             }
         else:
             patience_left -= 1
+
+        if writer is not None:
+            writer.add_scalar('loss/train', train_loss, epoch)
+            writer.add_scalar('loss/stopping', stopping_loss, epoch)
+            writer.add_scalar('loss/val', val_loss, epoch)
+            writer.add_scalar('accuracy/train', train_acc, epoch)
+            writer.add_scalar('accuracy/stopping', stopping_acc, epoch)
+            writer.add_scalar('accuracy/val', val_acc, epoch)
+            if test:
+                writer.add_scalar('loss/test', test_loss, epoch)
+                writer.add_scalar('accuracy/test', test_acc, epoch)
+            if (epoch % embedding_log_freq == 0 and
+                hasattr(model, 'get_last_embeddings')):
+                writer.add_embedding(model.get_last_embeddings(),
+                                     metadata=metadata,
+                                     metadata_header=metadata_header,
+                                     global_step=epoch,
+                                     tag='out_embeddings')
 
         if log_details:
             print("Epoch {:05d} | Time(s) {:.4f} | Loss {:.4f} | "
@@ -94,6 +168,13 @@ def train_and_eval_once(data, model, split_idx, stopping_patience, lr,
             model, data.features, data.labels,
             data.val_masks[split_idx], loss_fcn
         )
+
+    if writer is not None and hasattr(model, 'get_last_embeddings'):
+        writer.add_embedding(model.get_last_embeddings(),
+                             metadata=metadata,
+                             metadata_header=metadata_header,
+                             global_step=epoch,
+                             tag='final_out_embeddings')
 
     if preds_out is not None:
         mask = 1 - data.test_mask
@@ -121,17 +202,28 @@ def train_and_eval(model_fn, data, args, result_callback=None):
     val_accs = []
     val_losses = []
     epoch_counts = []
+
+    text_metadata = None
+    if args.metadata_file is not None:
+        with open(args.metadata_file) as inp:
+            text_metadata = json.load(inp)
+
     if args.max_splits is None or len(data.train_masks) <= args.max_splits:
         splits = len(data.train_masks)
     else:
         splits = args.max_splits
     for split_idx in range(splits):
         for run_idx in range(args.runs_per_split):
+            tb_dir = os.path.join(args.output_dir,
+                                    'split_' + str(split_idx) +
+                                    '_run_' + str(run_idx))
             model = model_fn(args, data)
             if args.gpu >= 0:
                 model.cuda()
             res = train_and_eval_once(data, model, split_idx, args.patience,
-                args.lr, args.weight_decay, args.test, log_details=args.verbose)
+                args.lr, args.weight_decay, args.test, log_details=args.verbose,
+                output_dir=tb_dir, embedding_log_freq=args.embedding_log_freq,
+                text_metadata=text_metadata)
             train_accs.append([res['train_acc']])
             train_losses.append(res['train_loss'])
             val_accs.append(res['val_acc'])
@@ -143,23 +235,32 @@ def train_and_eval(model_fn, data, args, result_callback=None):
         args.n_boot, args.conf_int)
     mean_val_loss, val_loss_uncertainty = mean_with_uncertainty(val_losses,
         args.n_boot, args.conf_int)
+
     print('{} accuracy: {:.2%} ± {:.2%}'.format(
         'Test' if args.test else 'Validation',
         mean_val_acc, val_acc_uncertainty))
+
+    type = 'test' if args.test else 'val'
+    results = {
+        'train_acc': np.array(train_accs).mean(),
+        'train_loss': np.array(train_losses).mean(),
+        'epochs': np.array(epoch_counts).mean(),
+        (type+'_acc'): mean_val_acc,
+        (type+'_acc_uncertainty'): val_acc_uncertainty,
+        (type+'_loss'): mean_val_loss,
+        (type+'_loss_uncertainty'): val_loss_uncertainty
+    }
+    with open(os.path.join(args.output_dir, 'eval_summary.txt'), 'w') as out:
+        json.dump({k: str(v) for k,v in results.items()}, out, indent=2)
     if result_callback is not None:
         result_callback(objective=mean_val_acc,
-                        context={
-                            'train_acc': np.array(train_accs).mean(),
-                            'train_loss': np.array(train_losses).mean(),
-                            'epochs': np.array(epoch_counts).mean(),
-                            'val_acc_uncertainty': val_acc_uncertainty,
-                            'val_loss': mean_val_loss,
-                            'val_loss_uncertainty': val_loss_uncertainty
-                        })
+                        context=results)
 
 
 def register_general_args(parser):
     register_data_args(parser)
+    parser.add_argument('--metadata-file',
+                        help='Mapping label and node IDs to readable names')
     parser.add_argument('--patience', type=int, default=100,
             help='epochs to train before giving up if accuracy does not '
                  'improve')
@@ -175,8 +276,13 @@ def register_general_args(parser):
     parser.add_argument('--max-splits', type=int,
             help='maximum number of different training splits to evaluate on. '
                  'Unbounded by default so all splits in dataset will be used')
+    parser.add_argument('--output-dir',
+                        help='Directory to write Tensorboard logs and eval '
+                             'results to')
+    parser.add_argument('--embedding-log-freq', type=int, default=40,
+            help='how many epochs between writing embeddings to tensorboard')
     parser.add_argument('--preds-output-file',
-            help='file for writin predictions on train/validation set for'
+            help='file for writing predictions on train/validation set for'
                  'analysis')
     parser.add_argument('--lr', type=float, default=1e-2,
             help='learning rate')
