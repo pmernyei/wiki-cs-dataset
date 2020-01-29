@@ -24,7 +24,7 @@ if __name__ == '__main__':
 
     parameters = [
         sherpa.Continuous(name='lr', range=[5e-4, 5e-2], scale='log'),
-        sherpa.Continuous(name='dropout', range=[0.0, 0.4]),
+        sherpa.Continuous(name='dropout', range=[0.01, 0.6]),
         sherpa.Discrete(name='num_hidden_units', range=[25, 45], scale='log')
     ]
     algorithm = sherpa.algorithms.GPyOpt(max_num_trials=args.n_trials)
