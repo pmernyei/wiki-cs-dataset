@@ -4,6 +4,7 @@ import seaborn as sns
 import json
 import os
 import itertools
+import string
 import networkx as nx
 import torch
 import torch.nn as nn
@@ -42,6 +43,11 @@ def evaluate(model, features, labels, mask, loss_fcn=None):
             return acc, loss_scalar(logits, labels, mask, loss_fcn)
 
 
+printable = set(string.printable)
+def strip_to_ascii(s):
+    return ''.join(filter(lambda x: x in printable, s))
+
+
 def compile_metadata(data, split_idx, text_metadata=None):
     labels = data.labels.cpu().tolist()
     splits = ['train' if data.train_masks[split_idx][i] else
@@ -51,8 +57,9 @@ def compile_metadata(data, split_idx, text_metadata=None):
     ids = range(len(data.features))
     metadata_header = ['id', 'label_id', 'split']
     if text_metadata is not None:
-        label_names = [text_metadata['labels'][lab] for lab in labels]
-        node_names = [text_metadata['nodes'][id]['title'] for id in ids]
+        label_names = [text_metadata['labels'][str(lab)] for lab in labels]
+        node_names = [strip_to_ascii(text_metadata['nodes'][id]['title'])
+                        for id in ids]
         metadata_header += ['label_names', 'node_names']
         return (metadata_header,
             list(zip(ids, labels, splits, label_names, node_names)))
@@ -61,8 +68,9 @@ def compile_metadata(data, split_idx, text_metadata=None):
 
 
 def train_and_eval_once(data, model, split_idx, stopping_patience, lr,
-                weight_decay, test=False, preds_out=None, log_details=False,
-                output_dir=None, embedding_log_freq=40, text_metadata=None):
+                weight_decay, output_dir, output_preds=False,
+                output_model=False, test=False,
+                embedding_log_freq=40, text_metadata=None):
     dur = []
     max_acc = 0
     patience_left = stopping_patience
@@ -77,11 +85,10 @@ def train_and_eval_once(data, model, split_idx, stopping_patience, lr,
     metadata_header, metadata = compile_metadata(
         data, split_idx, text_metadata)
 
-    writer = None
-    if output_dir is not None:
-        writer = SummaryWriter(output_dir)
-        writer.add_graph(model, data.features)
-        writer.add_embedding(data.features, metadata_header=metadata_header, metadata=metadata, tag='features')
+    writer = SummaryWriter(output_dir)
+    writer.add_graph(model, data.features)
+    writer.add_embedding(data.features, metadata_header=metadata_header,
+                        metadata=metadata, tag='features')
 
 
     while patience_left > 0:
@@ -127,29 +134,22 @@ def train_and_eval_once(data, model, split_idx, stopping_patience, lr,
         else:
             patience_left -= 1
 
-        if writer is not None:
-            writer.add_scalar('loss/train', train_loss, epoch)
-            writer.add_scalar('loss/stopping', stopping_loss, epoch)
-            writer.add_scalar('loss/val', val_loss, epoch)
-            writer.add_scalar('accuracy/train', train_acc, epoch)
-            writer.add_scalar('accuracy/stopping', stopping_acc, epoch)
-            writer.add_scalar('accuracy/val', val_acc, epoch)
-            if test:
-                writer.add_scalar('loss/test', test_loss, epoch)
-                writer.add_scalar('accuracy/test', test_acc, epoch)
-            if (epoch % embedding_log_freq == 0 and
-                hasattr(model, 'get_last_embeddings')):
-                writer.add_embedding(model.get_last_embeddings(),
-                                     metadata=metadata,
-                                     metadata_header=metadata_header,
-                                     global_step=epoch,
-                                     tag='out_embeddings')
-
-        if log_details:
-            print("Epoch {:05d} | Time(s) {:.4f} | Loss {:.4f} | "
-                  "Train acc {:.2%} | Val acc {:.2%} | ETputs(KTEPS) {:.2f}"
-                    .format(epoch, np.mean(dur), loss.item(), train_acc,
-                    stopping_acc, data.n_edges / np.mean(dur) / 1000))
+        writer.add_scalar('loss/train', train_loss, epoch)
+        writer.add_scalar('loss/stopping', stopping_loss, epoch)
+        writer.add_scalar('loss/val', val_loss, epoch)
+        writer.add_scalar('accuracy/train', train_acc, epoch)
+        writer.add_scalar('accuracy/stopping', stopping_acc, epoch)
+        writer.add_scalar('accuracy/val', val_acc, epoch)
+        if test:
+            writer.add_scalar('loss/test', test_loss, epoch)
+            writer.add_scalar('accuracy/test', test_acc, epoch)
+        if (epoch % embedding_log_freq == 0 and
+            hasattr(model, 'get_last_embeddings')):
+            writer.add_embedding(model.get_last_embeddings(),
+                                 metadata=metadata,
+                                 metadata_header=metadata_header,
+                                 global_step=epoch,
+                                 tag='out_embeddings')
         epoch += 1
 
     model.load_state_dict(best_vars)
@@ -169,20 +169,24 @@ def train_and_eval_once(data, model, split_idx, stopping_patience, lr,
             data.val_masks[split_idx], loss_fcn
         )
 
-    if writer is not None and hasattr(model, 'get_last_embeddings'):
+    if hasattr(model, 'get_last_embeddings'):
         writer.add_embedding(model.get_last_embeddings(),
                              metadata=metadata,
                              metadata_header=metadata_header,
                              global_step=epoch,
                              tag='final_out_embeddings')
 
-    if preds_out is not None:
+    if output_preds:
         mask = 1 - data.test_mask
         logits = model(data.features)
 
         _, preds = torch.max(logits, dim=1)
-        preds = preds*(1 - data.test_mask) - data.test_mask
-        json.dump(preds.tolist(), open(preds_out,'w'))
+        preds = preds*~data.test_mask - 1*data.test_mask
+        with open(os.path.join(output_dir, 'preds.json'), 'w') as out:
+            json.dump(preds.tolist(), out)
+
+    if output_model:
+        torch.save(model.state_dict(), os.path.join(output_dir, 'model.pt'))
 
     return result
 
@@ -214,16 +218,22 @@ def train_and_eval(model_fn, data, args, result_callback=None):
         splits = args.max_splits
     for split_idx in range(splits):
         for run_idx in range(args.runs_per_split):
-            tb_dir = os.path.join(args.output_dir,
+            run_dir = os.path.join(args.output_dir,
                                     'split_' + str(split_idx) +
                                     '_run_' + str(run_idx))
             model = model_fn(args, data)
             if args.gpu >= 0:
                 model.cuda()
-            res = train_and_eval_once(data, model, split_idx, args.patience,
-                args.lr, args.weight_decay, args.test, log_details=args.verbose,
-                output_dir=tb_dir, embedding_log_freq=args.embedding_log_freq,
-                text_metadata=text_metadata)
+            res = train_and_eval_once(
+                data, model, split_idx,
+                args.patience, args.lr, args.weight_decay,
+                run_dir,
+                output_preds = args.output_preds,
+                output_model = args.output_model,
+                test = args.test,
+                embedding_log_freq = args.embedding_log_freq,
+                text_metadata = text_metadata
+            )
             train_accs.append([res['train_acc']])
             train_losses.append(res['train_loss'])
             val_accs.append(res['val_acc'])
@@ -281,12 +291,12 @@ def register_general_args(parser):
                              'results to')
     parser.add_argument('--embedding-log-freq', type=int, default=40,
             help='how many epochs between writing embeddings to tensorboard')
-    parser.add_argument('--preds-output-file',
-            help='file for writing predictions on train/validation set for'
+    parser.add_argument('--output-preds', action='store_true',
+            help='write predictions on train/validation set to file for'
                  'analysis')
+    parser.add_argument('--output-model', action='store_true',
+            help='write weights of trained model to file')
     parser.add_argument('--lr', type=float, default=1e-2,
             help='learning rate')
     parser.add_argument('--weight-decay', type=float, default=5e-4,
             help='Weight for L2 loss')
-    parser.add_argument('--verbose', action='store_true',
-            help='Print performance after each epoch')
