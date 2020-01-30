@@ -206,11 +206,13 @@ def train_and_eval(model_fn, data, args, result_callback=None):
         with open(args.metadata_file) as inp:
             text_metadata = json.load(inp)
 
-    if args.max_splits is None or len(data.train_masks) <= args.max_splits:
-        splits = len(data.train_masks)
+    if (args.max_splits is None or
+        len(data.train_masks) <= (args.start_split + args.max_splits)):
+        end = len(data.train_masks)
     else:
-        splits = args.max_splits
-    for split_idx in range(splits):
+        end = args.start_split + args.max_splits
+
+    for split_idx in range(args.start_split, end):
         for run_idx in range(args.runs_per_split):
             run_dir = os.path.join(args.output_dir,
                                     'split_' + str(split_idx) +
@@ -280,6 +282,8 @@ def register_general_args(parser):
     parser.add_argument('--max-splits', type=int,
             help='maximum number of different training splits to evaluate on. '
                  'Unbounded by default so all splits in dataset will be used')
+    parser.add_argument('--start-split', type=int, default=0,
+            help='ID of first train split to evaluate with')
     parser.add_argument('--output-dir',
                         help='Directory to write Tensorboard logs and eval '
                              'results to')
