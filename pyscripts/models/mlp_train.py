@@ -20,7 +20,6 @@ def mlp_model_fn(args, data):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='GCN')
-    register_data_args(parser)
     register_general_args(parser)
     parser.add_argument("--n-hidden", type=int, default=16,
             help="number of hidden gcn units")
