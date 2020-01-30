@@ -71,7 +71,6 @@ def train_and_eval_once(data, model, split_idx, stopping_patience, lr,
                 weight_decay, output_dir, output_preds=False,
                 output_model=False, test=False,
                 embedding_log_freq=40, text_metadata=None):
-    dur = []
     max_acc = 0
     patience_left = stopping_patience
     best_vars = None
@@ -93,9 +92,6 @@ def train_and_eval_once(data, model, split_idx, stopping_patience, lr,
 
     while patience_left > 0:
         model.train()
-        if epoch >= 3:
-            t0 = time.time()
-
         logits = model(data.features)
         loss = loss_fcn(logits[data.train_masks[split_idx]],
                         data.labels[data.train_masks[split_idx]])
@@ -104,10 +100,8 @@ def train_and_eval_once(data, model, split_idx, stopping_patience, lr,
         loss.backward()
         optimizer.step()
 
-        if epoch >= 3:
-            dur.append(time.time() - t0)
-
-        train_acc = accuracy(logits, data.labels, mask=data.train_masks[split_idx])
+        train_acc = accuracy(logits, data.labels,
+        mask=data.train_masks[split_idx])
         train_loss = loss.cpu().detach().numpy().mean()
 
         model.eval()
@@ -116,13 +110,16 @@ def train_and_eval_once(data, model, split_idx, stopping_patience, lr,
             stopping_acc = accuracy(eval_logits, data.labels,
                                     data.stopping_masks[split_idx])
             stopping_loss = loss_scalar(eval_logits, data.labels,
-                                        data.stopping_masks[split_idx], loss_fcn)
-            val_acc = accuracy(eval_logits, data.labels, data.val_masks[split_idx])
+                                        data.stopping_masks[split_idx],
+                                        loss_fcn)
+            val_acc = accuracy(eval_logits, data.labels,
+                                data.val_masks[split_idx])
             val_loss = loss_scalar(eval_logits, data.labels,
                                    data.val_masks[split_idx], loss_fcn)
             if test:
                 test_acc = accuracy(eval_logits, data.labels, data.test_mask)
-                test_loss = loss_scalar(eval_logits, data.labels, data.test_mask, loss_fcn)
+                test_loss = loss_scalar(eval_logits, data.labels,
+                                        data.test_mask, loss_fcn)
 
         if stopping_acc > max_acc:
             max_acc = stopping_acc
@@ -177,9 +174,7 @@ def train_and_eval_once(data, model, split_idx, stopping_patience, lr,
                              tag='final_out_embeddings')
 
     if output_preds:
-        mask = 1 - data.test_mask
         logits = model(data.features)
-
         _, preds = torch.max(logits, dim=1)
         preds = preds*~data.test_mask - 1*data.test_mask
         with open(os.path.join(output_dir, 'preds.json'), 'w') as out:
