@@ -176,7 +176,6 @@ def train_and_eval_once(data, model, split_idx, stopping_patience, lr,
     if output_preds:
         logits = model(data.features)
         _, preds = torch.max(logits, dim=1)
-        preds = preds*~data.test_mask - 1*data.test_mask
         with open(os.path.join(output_dir, 'preds.json'), 'w') as out:
             json.dump(preds.tolist(), out)
 
