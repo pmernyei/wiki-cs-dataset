@@ -13,7 +13,7 @@ from appnp_train import register_appnp_args
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='APPNP hparam search')
     register_general_args(parser)
-    register_gcn_args(parser)
+    register_appnp_args(parser)
     parser.add_argument('--study-dir', help='file to write study results to')
     parser.add_argument('--n-trials', type=int, default=100,
         help='number of trials to run')
