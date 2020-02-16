@@ -21,6 +21,7 @@ if __name__ == '__main__':
     print('Parsed args:', args)
     with open(os.path.join(args.study_dir, 'args.json'), 'w') as out:
         json.dump(vars(args), out)
+    parent_out_dir = args.output_dir
 
     parameters = [
         sherpa.Continuous(name='lr', range=[5e-4, 5e-2], scale='log'),
@@ -39,6 +40,7 @@ if __name__ == '__main__':
     for trial in study:
         print('Starting trial {} with params {}'.format(
             trial.id, trial.parameters))
+        args.output_dir = os.path.join(args.output_dir, str(trial.id))
         args.lr = trial.parameters['lr']
         args.in_drop = trial.parameters['dropout']
         args.edge_drop = trial.parameters['dropout']

@@ -69,7 +69,7 @@ def compile_metadata(data, split_idx, text_metadata=None):
 
 def train_and_eval_once(data, model, split_idx, stopping_patience, lr,
                 weight_decay, output_dir, output_preds=False,
-                output_model=False, test=False,
+                output_model=False, output_embeddings=False, test=False,
                 embedding_log_freq=40, text_metadata=None):
     max_acc = 0
     patience_left = stopping_patience
@@ -85,9 +85,6 @@ def train_and_eval_once(data, model, split_idx, stopping_patience, lr,
         data, split_idx, text_metadata)
 
     writer = SummaryWriter(output_dir)
-    writer.add_embedding(data.features, metadata_header=metadata_header,
-                        metadata=metadata, tag='features')
-
 
     while patience_left > 0:
         model.train()
@@ -139,7 +136,7 @@ def train_and_eval_once(data, model, split_idx, stopping_patience, lr,
         if test:
             writer.add_scalar('loss/test', test_loss, epoch)
             writer.add_scalar('accuracy/test', test_acc, epoch)
-        if (epoch % embedding_log_freq == 0 and
+        if (epoch % embedding_log_freq == 0 and output_embeddings and
             hasattr(model, 'get_last_embeddings')):
             writer.add_embedding(model.get_last_embeddings(),
                                  metadata=metadata,
@@ -165,7 +162,7 @@ def train_and_eval_once(data, model, split_idx, stopping_patience, lr,
             data.val_masks[split_idx], loss_fcn
         )
 
-    if hasattr(model, 'get_last_embeddings'):
+    if hasattr(model, 'get_last_embeddings') and output_embeddings:
         writer.add_embedding(model.get_last_embeddings(),
                              metadata=metadata,
                              metadata_header=metadata_header,
@@ -292,6 +289,8 @@ def register_general_args(parser):
     parser.add_argument('--output-preds', action='store_true',
             help='write predictions on train/validation set to file for'
                  'analysis')
+    parser.add_argument('--output-embeddings', action='store_true',
+            help='write embeddings to file')
     parser.add_argument('--output-model', action='store_true',
             help='write weights of trained model to file')
     parser.add_argument('--lr', type=float, default=1e-2,
