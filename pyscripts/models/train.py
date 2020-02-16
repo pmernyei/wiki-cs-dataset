@@ -85,7 +85,6 @@ def train_and_eval_once(data, model, split_idx, stopping_patience, lr,
         data, split_idx, text_metadata)
 
     writer = SummaryWriter(output_dir)
-    writer.add_graph(model, data.features)
     writer.add_embedding(data.features, metadata_header=metadata_header,
                         metadata=metadata, tag='features')
 
@@ -172,6 +171,7 @@ def train_and_eval_once(data, model, split_idx, stopping_patience, lr,
                              metadata_header=metadata_header,
                              global_step=epoch,
                              tag='final_out_embeddings')
+    writer.close()
 
     if output_preds:
         logits = model(data.features)
