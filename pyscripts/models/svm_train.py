@@ -22,6 +22,9 @@ def fit_svm(data, C=200, kernel='rbf', gamma='scale', test=False):
                             data.labels[data.test_mask])
             print('Test accuracy:', acc)
         acc_sum += acc
+        if acc < 0.5:
+            print('Low accuracy, returning early estimate')
+            return acc_sum/(i+1)
     acc = acc_sum/len(data.train_masks)
     print('Avg {} accuracy: {:.4f}'.format('test' if test else 'val', acc))
     return acc
@@ -37,7 +40,8 @@ def product_dict(**kwargs):
 def hparam_search(data):
     kernels = ['linear', 'rbf', 'poly']
     gamma = ['auto', 'scale']
-    c = ([mul*order for order in [1e-4, 1e-3, 1e-2, 1e-1, 1, 1e1, 1e2, 1e3] for mul in [1,2,4,8]])
+    c = ([mul*order for order in [1e-4, 1e-3, 1e-2, 1e-1, 1, 1e1, 1e2, 1e3]
+        for mul in [1,2,4,8]])
     configs = list(product_dict(kernel=kernels, gamma=gamma, C=c))
     best_acc = 0
     best_config = {}
