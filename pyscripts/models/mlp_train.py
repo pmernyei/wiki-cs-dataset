@@ -18,15 +18,19 @@ def mlp_model_fn(args, data):
     return nn.Sequential(*layers)
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='GCN')
-    register_general_args(parser)
+def register_mlp_args(parser):
     parser.add_argument("--n-hidden", type=int, default=16,
-            help="number of hidden gcn units")
+            help="number of hidden units")
     parser.add_argument("--n-layers", type=int, default=1,
-            help="number of hidden gcn layers")
+            help="number of hidden layers")
     parser.add_argument("--dropout", type=float, default=0.5,
             help="dropout probability")
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='MLP')
+    register_general_args(parser)
+    register_mlp_args(parser)
     args = parser.parse_args()
     print('Parsed args:', args)
 
