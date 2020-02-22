@@ -12,7 +12,7 @@ def mlp_model_fn(args, data):
     layers.append(nn.Linear(data.n_feats, args.n_hidden))
     for i in range(args.n_layers - 1):
         layers.append(nn.Linear(args.n_hidden, args.n_hidden))
-        if dropout > 0:
+        if args.dropout > 0:
             layers.append(nn.Dropout(p=args.dropout))
     layers.append(nn.Linear(args.n_hidden, data.n_classes))
     return nn.Sequential(*layers)
