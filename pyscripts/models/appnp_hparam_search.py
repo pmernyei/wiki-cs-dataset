@@ -40,7 +40,7 @@ if __name__ == '__main__':
     for trial in study:
         print('Starting trial {} with params {}'.format(
             trial.id, trial.parameters))
-        args.output_dir = os.path.join(args.output_dir, str(trial.id))
+        args.output_dir = os.path.join(parent_out_dir, str(trial.id))
         args.lr = trial.parameters['lr']
         args.in_drop = trial.parameters['dropout']
         args.edge_drop = trial.parameters['dropout']
