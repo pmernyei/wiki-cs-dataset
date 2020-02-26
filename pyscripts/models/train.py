@@ -69,7 +69,8 @@ def compile_metadata(data, split_idx, text_metadata=None):
 
 def train_and_eval_once(data, model, split_idx, stopping_patience, lr,
                 weight_decay, output_dir, output_preds=False,
-                output_model=False, output_embeddings=False, test=False,
+                output_model=False, output_embeddings=False,
+                output_train_stats=False, test=False,
                 embedding_log_freq=40, text_metadata=None):
     max_acc = 0
     patience_left = stopping_patience
@@ -126,16 +127,17 @@ def train_and_eval_once(data, model, split_idx, stopping_patience, lr,
             }
         else:
             patience_left -= 1
+        if output_train_stats:
+            writer.add_scalar('loss/train', train_loss, epoch)
+            writer.add_scalar('loss/stopping', stopping_loss, epoch)
+            writer.add_scalar('loss/val', val_loss, epoch)
+            writer.add_scalar('accuracy/train', train_acc, epoch)
+            writer.add_scalar('accuracy/stopping', stopping_acc, epoch)
+            writer.add_scalar('accuracy/val', val_acc, epoch)
+            if test:
+                writer.add_scalar('loss/test', test_loss, epoch)
+                writer.add_scalar('accuracy/test', test_acc, epoch)
 
-        writer.add_scalar('loss/train', train_loss, epoch)
-        writer.add_scalar('loss/stopping', stopping_loss, epoch)
-        writer.add_scalar('loss/val', val_loss, epoch)
-        writer.add_scalar('accuracy/train', train_acc, epoch)
-        writer.add_scalar('accuracy/stopping', stopping_acc, epoch)
-        writer.add_scalar('accuracy/val', val_acc, epoch)
-        if test:
-            writer.add_scalar('loss/test', test_loss, epoch)
-            writer.add_scalar('accuracy/test', test_acc, epoch)
         if (epoch % embedding_log_freq == 0 and output_embeddings and
             hasattr(model, 'get_last_embeddings')):
             writer.add_embedding(model.get_last_embeddings(),
@@ -223,6 +225,7 @@ def train_and_eval(model_fn, data, args, result_callback=None):
                 run_dir,
                 output_preds = args.output_preds,
                 output_model = args.output_model,
+                output_train_stats = args.output_train_stats,
                 test = args.test,
                 embedding_log_freq = args.embedding_log_freq,
                 text_metadata = text_metadata
@@ -293,6 +296,8 @@ def register_general_args(parser):
             help='write embeddings to file')
     parser.add_argument('--output-model', action='store_true',
             help='write weights of trained model to file')
+    parser.add_argument('--output-train-stats', action='store_true',
+            help='write data points for training graphs to file')
     parser.add_argument('--lr', type=float, default=1e-2,
             help='learning rate')
     parser.add_argument('--weight-decay', type=float, default=5e-4,
