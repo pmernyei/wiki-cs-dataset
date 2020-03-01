@@ -1,0 +1,9 @@
+{
+  "epochs": "242.26",
+  "train_acc": "0.9046724137931037",
+  "test_loss": "0.8415818",
+  "test_loss_uncertainty": "0.003624199330806821",
+  "train_loss": "0.3821418",
+  "test_acc_uncertainty": "0.0012058748075938208",
+  "test_acc": "0.7236753890884213"
+}
