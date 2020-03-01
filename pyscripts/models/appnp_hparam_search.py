@@ -26,7 +26,7 @@ if __name__ == '__main__':
     parameters = [
         sherpa.Continuous(name='dropout', range=[0.01, 0.6]),
         sherpa.Continuous(name='alpha', range=[0.08, 0.16]),
-        sherpa.Discrete(name='k', range=[5, 15])
+        sherpa.Discrete(name='k', range=[1, 7])
     ]
     algorithm = sherpa.algorithms.RandomSearch(max_num_trials=args.n_trials)
     study = sherpa.Study(parameters=parameters,
