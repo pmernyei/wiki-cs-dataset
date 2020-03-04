@@ -1,0 +1,9 @@
+{
+  "val_acc_uncertainty": "0.005823911814584526",
+  "val_loss_uncertainty": "0.0300280898809433",
+  "train_loss": "0.32879373",
+  "epochs": "277.9",
+  "val_acc": "0.8",
+  "val_loss": "0.73260057",
+  "train_acc": "0.9205172413793103"
+}
