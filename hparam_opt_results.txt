@@ -10,3 +10,16 @@ GAT:
     - num_layers 1
     - dropout 0.5
     - lr 0.007
+SVM:
+    - {'kernel': 'rbf', 'gamma': 'scale', 'C': 8}
+APPNP:
+    - k 5?? Need to explore lower too
+    - lr 0.02
+    - dropout 0.4
+    - alpha 0.11
+
+MLP: pretty random, not too sensitive apparently
+    - lr 0.003
+    - dropout 0.35
+    - n hidden 35
+    - n layers 1
