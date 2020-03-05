@@ -92,13 +92,17 @@ class GAT_GResNet(nn.Module):
                                     dropout, dropout, negative_slope, False, F.relu)
         self.gres_layers = nn.ModuleList()
         for i in range(n_layers - 1):
+            flattened_conv = nn.Sequential([
+                GATConv(num_heads*hidden_dim,
+                        hidden_dim,
+                        num_heads,dropout, dropout,
+                        negative_slope,
+                        residual=False,
+                        activation=None),
+                nn.Flatten(1)
+            ])
             self.gres_layers.append(GResConv(graph, graph_res, raw_res, F.relu,
-                                            GATConv(num_heads*hidden_dim,
-                                                    hidden_dim,
-                                                    num_heads,dropout, dropout,
-                                                    negative_slope,
-                                                    residual=False,
-                                                    activation=None)))
+                                             flattened_conv))
         self.output_conv = GATConv(num_heads*hidden_dim, out_dim, 1,dropout,
                                     dropout,negative_slope,
                                     residual=False,
