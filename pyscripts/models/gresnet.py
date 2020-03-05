@@ -4,20 +4,18 @@ import torch.nn.functional as F
 
 from dgl.nn.pytorch import GraphConv
 from dgl.nn.pytorch import GATConv
+import dgl.function as fn
 
 
 class GResConv(nn.Module):
     def __init__(self,
                  g,
-                 in_dim,
-                 out_dim,
                  graph_res,
                  raw_res,
                  activation,
                  base_conv):
         super(GResConv, self).__init__()
         self.g = g
-        self.in_dim = in_dim
         self.graph_res = graph_res
         self.raw_res = raw_res
         self.conv = base_conv
@@ -26,9 +24,9 @@ class GResConv(nn.Module):
     def forward(self, prev, raw):
         res = raw if self.raw_res else prev
         if self.graph_res:
-            norm = th.pow(graph.in_degrees().float().clamp(min=1), -0.5)
+            norm = torch.pow(self.g.in_degrees().float().clamp(min=1), -0.5)
             shp = norm.shape + (1,) * (res.dim() - 1)
-            norm = th.reshape(norm, shp).to(res.device)
+            norm = torch.reshape(norm, shp).to(res.device)
             res = res * norm
 
             graph = self.g.local_var()
@@ -43,7 +41,7 @@ class GResConv(nn.Module):
         return next
 
 
-class GResNet(nn.Module):
+class GCN_GResNet(nn.Module):
     def __init__(self,
                  graph,
                  graph_res,
@@ -52,46 +50,62 @@ class GResNet(nn.Module):
                  in_dim,
                  hidden_dim,
                  out_dim,
-                 dropout,
-                 base_conv):
-        super(GResNet, self).__init__()
-        self.layers = nn.ModuleList()
-        self.layers.append(GraphConv(in_dim, hidden_dim, activation=F.relu))
-        for i in range(n_layers - 1):
-            self.layers.append(GResConv(graph, hidden_dim, hidden_dim,
-                                        graph_res, raw_res, F.relu,
-                                        GraphConv(hidden_dim,hidden_dim)))
-        self.layers.append(GraphConv(hidden_dim, out_dim))
-        self.dropout = nn.Dropout(p=dropout)
+                 dropout):
+        super(GCN_GResNet, self).__init__()
         self.g = graph
+        self.dropout = nn.Dropout(p=dropout)
+        self.input_conv = GraphConv(in_dim, hidden_dim, activation=F.relu)
 
-
-        #elif base_conv == "gat":
-        #    self.layers.append(GResConv(graph, in_dim, hidden_dim, graph_res,
-        #                                raw_res, F.relu,
-        #                                GATConv(in_dim, hidden_dim, 5,
-        #                                        dropout, dropout,
-        #                                        0.2, False, None)))
-        #    for i in range(n_layers - 1):
-        #        self.layers.append(GResConv(graph, hidden_dim, hidden_dim,
-        #                                    graph_res, raw_res, F.relu,
-        #                                    GATConv(5*hidden_dim, hidden_dim, 5,
-        #                                            dropout, dropout,
-        #                                            0.2, True, None)))
-        #    self.layers.append(GResConv(graph, hidden_dim, out_dim, graph_res,
-        #                                raw_res, F.relu,
-        #                                GATConv(5*in_dim, out_dim, 1,
-        #                                        dropout, dropout,
-        #                                        0.2, False, None)))
-        #    self.dropout = nn.Dropout(p=0)
+        self.gres_layers = nn.ModuleList()
+        for i in range(n_layers - 1):
+            self.gres_layers.append(GResConv(graph, graph_res, raw_res, F.relu,
+                                            GraphConv(hidden_dim, hidden_dim)))
+        self.output_conv = GraphConv(hidden_dim, out_dim)
+        self.raw_proj = nn.Linear(in_dim, hidden_dim)
 
 
     def forward(self, features):
+        raw = self.raw_proj(features)
         h = features
-        h = self.layers[0](self.g, h)
-        for i,layer in enumerate(self.layers[1:-1]):
+        h = self.input_conv(self.g, h)
+        for layer in self.gres_layers:
             h = self.dropout(h)
-            h = layer(h,features)
+            h = layer(h,raw)
         h = self.dropout(h)
-        h = self.layers[-1](self.g, h)
-        return h
+        return self.output_conv(self.g, h)
+
+
+class GAT_GResNet(nn.Module):
+    def __init__(self,
+                 graph,
+                 graph_res,
+                 raw_res,
+                 n_layers,
+                 in_dim,
+                 hidden_dim,
+                 out_dim,
+                 dropout):
+        super(GAT_GResNet, self).__init__()
+        self.g = graph
+        self.input_conv = GATConv(in_dim, hidden_dim, 5, dropout, dropout,
+                                    0.2, False, F.relu)
+        self.gres_layers = nn.ModuleList()
+        for i in range(n_layers - 1):
+            self.gres_layers.append(GResConv(graph, 5*hidden_dim, hidden_dim,
+                                            graph_res, raw_res, F.relu,
+                                            GATConv(5*hidden_dim, hidden_dim, 5,
+                                                    dropout, dropout,
+                                                    0.2, False, None)))
+        self.output_conv = GATConv(5*hidden_dim, out_dim, 1,
+                                    dropout, dropout,
+                                    0.2, False, None)
+        self.raw_proj = nn.Linear(in_dim, hidden_dim)
+
+
+    def forward(self, features):
+        raw = self.raw_proj(features)
+        h = features
+        h = self.input_conv(self.g, h)
+        for layer in self.gres_layers:
+            h = layer(h,raw)
+        return self.output_conv(self.g, h)

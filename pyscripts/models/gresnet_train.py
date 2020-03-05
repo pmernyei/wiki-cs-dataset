@@ -1,22 +1,31 @@
 import argparse
-import torch.nn.functional as F
 
 import load_graph_data
 from train import train_and_eval
 from train import register_general_args
-from gresnet import GResNet
+from gresnet import GCN_GResNet
+from gresnet import GAT_GResNet
 
 
 def gresnet_model_fn(args, data):
-    return GResNet(data.graph,
-                args.graph_res,
-                args.raw_res,
-                args.n_layers,
-                data.n_feats,
-                args.n_hidden,
-                data.n_classes,
-                args.dropout,
-                args.base_conv)
+    if data.base_conv == 'gcn':
+        return GCN_GResNet(data.graph,
+                    args.graph_res,
+                    args.raw_res,
+                    args.n_layers,
+                    data.n_feats,
+                    args.n_hidden,
+                    data.n_classes,
+                    args.dropout)
+    elif data.base_conv == 'gat':
+        return GAT_GResNet(data.graph,
+                    args.graph_res,
+                    args.raw_res,
+                    args.n_layers,
+                    data.n_feats,
+                    args.n_hidden,
+                    data.n_classes,
+                    args.dropout)
 
 
 def register_gresnet_args(parser):
