@@ -247,6 +247,13 @@ def train_and_eval(model_fn, data, args, result_callback=None):
         mean_val_acc, val_acc_uncertainty))
 
     type = 'test' if args.test else 'val'
+    details = {
+        'train_accs': train_accs,
+        'train_losses': train_losses,
+        (type+'_accs'): val_accs,
+        (type+'_losses'): val_losses,
+        'epoch_counts': epoch_counts
+    }
     results = {
         'train_acc': np.array(train_accs).mean(),
         'train_loss': np.array(train_losses).mean(),
@@ -254,7 +261,8 @@ def train_and_eval(model_fn, data, args, result_callback=None):
         (type+'_acc'): mean_val_acc,
         (type+'_acc_uncertainty'): val_acc_uncertainty,
         (type+'_loss'): mean_val_loss,
-        (type+'_loss_uncertainty'): val_loss_uncertainty
+        (type+'_loss_uncertainty'): val_loss_uncertainty,
+        'split_details': details
     }
     with open(os.path.join(args.output_dir, 'eval_summary.txt'), 'w') as out:
         json.dump({k: str(v) for k,v in results.items()}, out, indent=2)
