@@ -5,6 +5,7 @@ import json
 import os
 import itertools
 import string
+import csv
 import networkx as nx
 import torch
 import torch.nn as nn
@@ -199,6 +200,11 @@ def train_and_eval(model_fn, data, args, result_callback=None):
     val_accs = []
     val_losses = []
     epoch_counts = []
+    csvfile = open(os.path.join(args.output_dir, 'splits_results.csv'),
+                    'w', newline='')
+    csv_out = csv.DictWriter(csvfile, fieldnames=
+        ['train_acc', 'val_acc', 'train_loss', 'val_loss', 'epochs'])
+    csv_out.writeheader()
 
     text_metadata = None
     if args.metadata_file is not None:
@@ -230,13 +236,16 @@ def train_and_eval(model_fn, data, args, result_callback=None):
                 embedding_log_freq = args.embedding_log_freq,
                 text_metadata = text_metadata
             )
-            train_accs.append([res['train_acc']])
+            train_accs.append(res['train_acc'])
             train_losses.append(res['train_loss'])
             val_accs.append(res['val_acc'])
             val_losses.append(res['val_loss'])
             epoch_counts.append(res['epochs'])
             print('Split {} run {} accuracy: {:.2%}'
                     .format(split_idx, run_idx, res['val_acc']))
+            csv_out.writerow(res)
+
+    csvfile.close()
     mean_val_acc, val_acc_uncertainty = mean_with_uncertainty(val_accs,
         args.n_boot, args.conf_int)
     mean_val_loss, val_loss_uncertainty = mean_with_uncertainty(val_losses,
