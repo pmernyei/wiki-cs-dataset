@@ -74,7 +74,6 @@ class GCN_GResNet(nn.Module):
         h = self.dropout(h)
         return self.output_conv(self.g, h)
 
-
 class GAT_GResNet(nn.Module):
     def __init__(self,
                  graph,
@@ -86,19 +85,25 @@ class GAT_GResNet(nn.Module):
                  out_dim,
                  dropout):
         super(GAT_GResNet, self).__init__()
+        num_heads = 5
+        negative_slope = 0.2
         self.g = graph
-        self.input_conv = GATConv(in_dim, hidden_dim, 5, dropout, dropout,
-                                    0.2, False, F.relu)
+        self.input_conv = GATConv(in_dim, hidden_dim, num_heads,
+                                    dropout, dropout, negative_slope, False, F.relu)
         self.gres_layers = nn.ModuleList()
         for i in range(n_layers - 1):
             self.gres_layers.append(GResConv(graph, graph_res, raw_res, F.relu,
-                                            GATConv(5*hidden_dim, hidden_dim, 5,
-                                                    dropout, dropout,
-                                                    0.2, False, None)))
-        self.output_conv = GATConv(5*hidden_dim, out_dim, 1,
-                                    dropout, dropout,
-                                    0.2, False, None)
-        self.raw_proj = nn.Linear(in_dim, hidden_dim)
+                                            GATConv(num_heads*hidden_dim,
+                                                    hidden_dim,
+                                                    num_heads,dropout, dropout,
+                                                    negative_slope,
+                                                    residual=False,
+                                                    activation=None)))
+        self.output_conv = GATConv(num_heads*hidden_dim, out_dim, 1,dropout,
+                                    dropout,negative_slope,
+                                    residual=False,
+                                    activation=None)
+        self.raw_proj = nn.Linear(in_dim, num_heads*hidden_dim)
 
 
     def forward(self, features):
