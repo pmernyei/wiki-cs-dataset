@@ -80,7 +80,7 @@ class FlattenedConv(nn.Module):
         super(FlattenedConv, self).__init__()
         self.conv = conv
 
-    def forward(g, h):
+    def forward(self, g, h):
         return self.conv(g, h).flatten(1)
 
 
