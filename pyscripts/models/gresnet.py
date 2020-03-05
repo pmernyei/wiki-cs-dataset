@@ -109,7 +109,7 @@ class GAT_GResNet(nn.Module):
     def forward(self, features):
         raw = self.raw_proj(features)
         h = features
-        h = self.input_conv(self.g, h)
+        h = self.input_conv(self.g, h).flatten(1)
         for layer in self.gres_layers:
-            h = layer(h,raw)
-        return self.output_conv(self.g, h)
+            h = layer(h,raw).flatten(1)
+        return self.output_conv(self.g, h).mean(1)
