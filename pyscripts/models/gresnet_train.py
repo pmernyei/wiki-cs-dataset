@@ -8,7 +8,7 @@ from gresnet import GAT_GResNet
 
 
 def gresnet_model_fn(args, data):
-    if data.base_conv == 'gcn':
+    if args.base_conv == 'gcn':
         return GCN_GResNet(data.graph,
                     args.graph_res,
                     args.raw_res,
@@ -17,7 +17,7 @@ def gresnet_model_fn(args, data):
                     args.n_hidden,
                     data.n_classes,
                     args.dropout)
-    elif data.base_conv == 'gat':
+    elif args.base_conv == 'gat':
         return GAT_GResNet(data.graph,
                     args.graph_res,
                     args.raw_res,
