@@ -74,6 +74,16 @@ class GCN_GResNet(nn.Module):
         h = self.dropout(h)
         return self.output_conv(self.g, h)
 
+
+class FlattenedConv(nn.Module):
+    def __init__(self, conv):
+        super(FlattenedConv, self).__init__()
+        self.conv = conv
+
+    def forward(g, h):
+        return self.conv(g, h).flatten(1)
+
+
 class GAT_GResNet(nn.Module):
     def __init__(self,
                  graph,
@@ -92,14 +102,13 @@ class GAT_GResNet(nn.Module):
                                     dropout, dropout, negative_slope, False, F.relu)
         self.gres_layers = nn.ModuleList()
         for i in range(n_layers - 1):
-            flattened_conv = nn.Sequential(
+            flattened_conv = FlattenedConv(
                 GATConv(num_heads*hidden_dim,
                         hidden_dim,
                         num_heads,dropout, dropout,
                         negative_slope,
                         residual=False,
                         activation=None),
-                nn.Flatten(1)
             )
             self.gres_layers.append(GResConv(graph, graph_res, raw_res, F.relu,
                                              flattened_conv))
