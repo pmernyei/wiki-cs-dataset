@@ -91,8 +91,7 @@ class GAT_GResNet(nn.Module):
                                     0.2, False, F.relu)
         self.gres_layers = nn.ModuleList()
         for i in range(n_layers - 1):
-            self.gres_layers.append(GResConv(graph, 5*hidden_dim, hidden_dim,
-                                            graph_res, raw_res, F.relu,
+            self.gres_layers.append(GResConv(graph, graph_res, raw_res, F.relu,
                                             GATConv(5*hidden_dim, hidden_dim, 5,
                                                     dropout, dropout,
                                                     0.2, False, None)))
