@@ -41,6 +41,7 @@ if __name__ == '__main__':
         print('Starting trial {} with params {}'.format(
             trial.id, trial.parameters))
         args.output_dir = os.path.join(parent_out_dir, str(trial.id))
+        os.mkdir(args.output_dir)
         args.lr = trial.parameters['lr']
         args.n_hidden = int(trial.parameters['num_hidden_units'])
         args.dropout = trial.parameters['dropout']
