@@ -1,9 +1,0 @@
-{
-  "test_acc": "0.776042414913631",
-  "train_loss": "0.3771793",
-  "train_acc": "0.8729137931034484",
-  "epochs": "300.18",
-  "test_loss": "0.7563551",
-  "test_acc_uncertainty": "0.001087780058149579",
-  "test_loss_uncertainty": "0.004248908162116982"
-}
