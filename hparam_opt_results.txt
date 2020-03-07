@@ -13,7 +13,7 @@ GAT:
 SVM:
     - {'kernel': 'rbf', 'gamma': 'scale', 'C': 8}
 APPNP:
-    - k 5?? Need to explore lower too
+    - k 2 (strange, look at wth this means!)
     - lr 0.02
     - dropout 0.4
     - alpha 0.11
