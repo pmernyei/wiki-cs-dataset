@@ -29,9 +29,9 @@ def gresnet_model_fn(args, data):
 
 
 def register_gresnet_args(parser):
-    parser.add_argument("--n-hidden", type=int, default=33,
+    parser.add_argument("--n-hidden", type=int, default=16,
             help="number of hidden units")
-    parser.add_argument("--n-layers", type=int, default=5,
+    parser.add_argument("--n-layers", type=int, default=4,
             help="number of hidden gresnet layers")
     parser.add_argument("--dropout", type=float, default=0.5,
             help="dropout probability")
