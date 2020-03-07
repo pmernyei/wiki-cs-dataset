@@ -102,7 +102,7 @@ class GAT_GResNet(nn.Module):
                  out_dim,
                  dropout):
         super(GAT_GResNet, self).__init__()
-        num_heads = 5
+        num_heads = 8
         negative_slope = 0.2
         self.g = graph
 
@@ -112,10 +112,10 @@ class GAT_GResNet(nn.Module):
             return GResConv(graph, graph_res, raw_res, inp, out*heads, act, conv)
 
         self.layers = nn.ModuleList()
-        self.layers.append(create_layer(in_dim, hidden_dim, num_heads, F.relu))
+        self.layers.append(create_layer(in_dim, hidden_dim, num_heads, F.elu))
         for i in range(n_layers - 1):
             self.layers.append(
-                create_layer(hidden_dim*num_heads, hidden_dim, num_heads, F.relu))
+                create_layer(hidden_dim*num_heads, hidden_dim, num_heads, F.elu))
 
         self.output_conv = create_layer(hidden_dim*num_heads, out_dim, 1, None)
 
