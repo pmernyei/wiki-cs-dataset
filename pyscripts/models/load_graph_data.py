@@ -60,14 +60,14 @@ def from_builtin(args):
         val_masks = [torch.BoolTensor(data.val_mask *
             [i % 2 == 0 for i in range(len(data.val_mask))])]
         stopping_masks = [torch.BoolTensor(data.val_mask *
-            [i % 2 == 0 for i in range(len(data.val_mask))])]
+            [i % 2 == 1 for i in range(len(data.val_mask))])]
         test_mask = torch.BoolTensor(data.test_mask)
     else:
         train_masks = [torch.ByteTensor(data.train_mask)]
         val_masks = [torch.ByteTensor(data.val_mask *
             [i % 2 == 0 for i in range(len(data.val_mask))])]
         stopping_masks = [torch.ByteTensor(data.val_mask *
-            [i % 2 == 0 for i in range(len(data.val_mask))])]
+            [i % 2 == 1 for i in range(len(data.val_mask))])]
         test_mask = torch.ByteTensor(data.test_mask)
     n_feats = features.shape[1]
     n_classes = data.num_labels
@@ -135,4 +135,3 @@ def register_data_args(parser):
     parser.add_argument("--self-loop", action='store_true',
             help="graph self-loop (default=False)")
     parser.set_defaults(self_loop=False)
-    
