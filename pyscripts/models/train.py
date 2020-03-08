@@ -195,11 +195,8 @@ def mean_with_uncertainty(values, n_boot, conf_threshold):
 
 
 def train_and_eval(model_fn, data, args, result_callback=None):
-    train_accs = []
-    train_losses = []
-    val_accs = []
-    val_losses = []
-    epoch_counts = []
+    with open(os.path.join(args.output_dir, 'args.json'), 'w') as out:
+        json.dump(vars(args), out)
     csvfile = open(os.path.join(args.output_dir, 'splits_results.csv'),
                     'w', newline='')
     csv_out = csv.DictWriter(csvfile, fieldnames=
@@ -216,6 +213,12 @@ def train_and_eval(model_fn, data, args, result_callback=None):
         end = len(data.train_masks)
     else:
         end = args.start_split + args.max_splits
+
+    train_accs = []
+    train_losses = []
+    val_accs = []
+    val_losses = []
+    epoch_counts = []
 
     for split_idx in range(args.start_split, end):
         for run_idx in range(args.runs_per_split):
