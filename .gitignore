@@ -1,7 +1,7 @@
-# large input/output data files
-data/
+# large input/intermediate data files
+data_processing/pipeline_data/
 
 # python scripts
-pyscripts/env
-pyscripts/tmp
+models/env
+models/tmp
 __pycache__/
