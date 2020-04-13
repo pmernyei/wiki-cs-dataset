@@ -1,10 +1,10 @@
 import argparse
 
-import load_graph_data
-from train import train_and_eval
-from train import register_general_args
-from gresnet import GCN_GResNet
-from gresnet import GAT_GResNet
+from .. import load_graph_data
+from ..train import train_and_eval
+from ..train import register_general_args
+from .gresnet import GCN_GResNet
+from .gresnet import GAT_GResNet
 
 
 def gresnet_model_fn(args, data):

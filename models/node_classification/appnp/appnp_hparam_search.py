@@ -3,17 +3,17 @@ import argparse
 import os
 import json
 
-import load_graph_data
-from train import train_and_eval
-from train import register_general_args
-from mlp_train import mlp_model_fn
-from mlp_train import register_mlp_args
+from .. import load_graph_data
+from ..train import train_and_eval
+from ..train import register_general_args
+from .appnp_train import appnp_model_fn
+from .appnp_train import register_appnp_args
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='MLP hparam search')
+    parser = argparse.ArgumentParser(description='APPNP hparam search')
     register_general_args(parser)
-    register_mlp_args(parser)
+    register_appnp_args(parser)
     parser.add_argument('--study-dir', help='file to write study results to')
     parser.add_argument('--n-trials', type=int, default=100,
         help='number of trials to run')
@@ -25,9 +25,8 @@ if __name__ == '__main__':
 
     parameters = [
         sherpa.Continuous(name='dropout', range=[0.01, 0.6]),
-        sherpa.Continuous(name='lr', range=[1e-4, 1e-1], scale='log'),
-        sherpa.Discrete(name='n_hidden_layers', range=[1, 6]),
-        sherpa.Discrete(name='n_hidden_units', range=[10, 60])
+        sherpa.Continuous(name='alpha', range=[0.08, 0.16]),
+        sherpa.Discrete(name='k', range=[1, 7])
     ]
     algorithm = sherpa.algorithms.RandomSearch(max_num_trials=args.n_trials)
     study = sherpa.Study(parameters=parameters,
@@ -41,14 +40,15 @@ if __name__ == '__main__':
         print('Starting trial {} with params {}'.format(
             trial.id, trial.parameters))
         args.output_dir = os.path.join(parent_out_dir, str(trial.id))
-        args.lr = trial.parameters['lr']
-        args.dropout = trial.parameters['dropout']
-        args.n_layers = trial.parameters['n_hidden_layers']
-        args.n_hidden = trial.parameters['n_hidden_units']
+        args.lr = 0.02
+        args.in_drop = trial.parameters['dropout']
+        args.edge_drop = trial.parameters['dropout']
+        args.alpha = trial.parameters['alpha']
+        args.k = trial.parameters['k']
         callback = (lambda objective, context:
                         study.add_observation(trial=trial,
                                               objective=objective,
                                               context=context))
-        train_and_eval(mlp_model_fn, data, args, callback)
+        train_and_eval(appnp_model_fn, data, args, callback)
         study.finalize(trial)
         study.save()

@@ -13,7 +13,7 @@ import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
 from dgl import DGLGraph
 
-from load_graph_data import register_data_args
+from .load_graph_data import register_data_args
 
 
 def accuracy(logits, labels, mask=None):

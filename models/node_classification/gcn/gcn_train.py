@@ -1,10 +1,10 @@
 import argparse
 import torch.nn.functional as F
 
-import load_graph_data
-from train import train_and_eval
-from train import register_general_args
-from gcn import GCN
+from .. import load_graph_data
+from ..train import train_and_eval
+from ..train import register_general_args
+from .gcn import GCN
 
 
 

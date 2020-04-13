@@ -1,10 +1,9 @@
 import argparse
 import torch.nn as nn
 
-import load_graph_data
-from load_graph_data import register_data_args
-from train import train_and_eval
-from train import register_general_args
+from .. import load_graph_data
+from ..train import train_and_eval
+from ..train import register_general_args
 
 
 def mlp_model_fn(args, data):
