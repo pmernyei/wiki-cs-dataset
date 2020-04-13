@@ -73,7 +73,7 @@ def train_and_eval_once(data, model, split_idx, stopping_patience, lr,
                 output_model=False, output_embeddings=False,
                 output_train_stats=False, test=False,
                 embedding_log_freq=40, text_metadata=None):
-    max_acc = 0
+    min_loss = 100000
     patience_left = stopping_patience
     best_vars = None
     epoch = 0
@@ -119,8 +119,8 @@ def train_and_eval_once(data, model, split_idx, stopping_patience, lr,
                 test_loss = loss_scalar(eval_logits, data.labels,
                                         data.test_mask, loss_fcn)
 
-        if stopping_acc > max_acc:
-            max_acc = stopping_acc
+        if stopping_loss < min_loss:
+            min_loss = stopping_loss
             patience_left = stopping_patience
             best_vars = {
                 key: value.clone()
