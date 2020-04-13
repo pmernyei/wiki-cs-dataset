@@ -98,7 +98,8 @@ def calculate_milestone_tree(subcats_filename, sizes_filename=None,
     }
 
     if out_filename:
-        open(out_filename, 'w+', encoding='utf8').write(json.dumps(result))
+        with open(out_filename, 'w+', encoding='utf8') as out:
+            print_tree('Articles', result, output=out)
     return result
 
 
