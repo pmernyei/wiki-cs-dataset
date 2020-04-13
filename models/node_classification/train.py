@@ -254,7 +254,7 @@ def train_and_eval(model_fn, data, args, result_callback=None):
     mean_val_loss, val_loss_uncertainty = mean_with_uncertainty(val_losses,
         args.n_boot, args.conf_int)
 
-    print('{} accuracy: {:.2%} ± {:.2%}'.format(
+    print('{} accuracy: {:.2%} +- {:.2%}'.format(
         'Test' if args.test else 'Validation',
         mean_val_acc, val_acc_uncertainty))
 
