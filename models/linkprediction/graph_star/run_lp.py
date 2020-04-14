@@ -11,16 +11,21 @@ import torch
 from torch_geometric.nn import GAE
 import trainer
 import utils.gsn_argparse as gap
+import load_wiki_data
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
 
 def load_data(dataset_name):
     path = osp.join(osp.dirname(osp.realpath(__file__)), '.', 'data', dataset_name)
-
-    dataset = Planetoid(path, dataset_name, T.TargetIndegree())
-    num_features = dataset.num_features
-    data = GAE.split_edges(GAE, dataset[0])
+    if dataset_name in ['cora', 'citeseer', 'pubmed']:
+        dataset = Planetoid(path, dataset_name, T.TargetIndegree())
+        num_features = dataset.num_features
+        data = GAE.split_edges(GAE, dataset[0])
+    else:
+        data = load_wiki_data.load_data(dataset_name, T.TargetIndegree())
+        data = GAE.split_edges(GAE, data)
+        num_features = data.x.shape[1]
 
     data.train_pos_edge_index = gutils.to_undirected(data.train_pos_edge_index)
     data.val_pos_edge_index = gutils.to_undirected(data.val_pos_edge_index)
