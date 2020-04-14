@@ -5,11 +5,14 @@ import argparse
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='splits-experiment-plot')
     parser.add_argument('--results-file', help='file to read results from')
+    parser.add_argument('--start-split', type=int, default=0)
+    parser.add_argument('--total-splits', type=int, default=5)
     parser.add_argument('--out', help='file to read results from',
         default='violinplot.png')
     args = parser.parse_args()
 
     results = pd.read_pickle(args.results_file)
+    results = results[(results.split >= args.start_split) & (results.split < args.start_split + args.total_splits)]
     results['accuracy_delta'] = results.accuracy
     for model in results.model.unique():
         mask = (results.model == model)
