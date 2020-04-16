@@ -313,7 +313,11 @@ def trainer(args, DATASET, train_loader, val_loader, test_loader, transductive=F
             # tw.writer.add_scalar('test/lp_ap', test_lp_ap, tw.test_steps)
             max_lp_auc = max(test_lp_auc, max_lp_auc)
             max_lp_ap = max(test_lp_ap, max_lp_ap)
-            max_val_lp = max((val_lp_ap + val_lp_auc) / 2, max_val_lp)
+            val_lp = (val_lp_ap + val_lp_auc) / 2
+            if val_lp > max_val_lp:
+                max_val_lp = max_val_lp
+                eval_test_auc = test_lp_auc
+                eval_test_ap = test_lp_ap
 
             train_str += "LP AVG: {:.4f}, ".format(sum([train_lp_auc, train_lp_ap]) / 2)
             val_str += "LP AVG: {:.4f}, ".format(sum([val_lp_auc, val_lp_ap]) / 2)
@@ -331,6 +335,9 @@ def trainer(args, DATASET, train_loader, val_loader, test_loader, transductive=F
             torch.save(model, os.path.join("output", DATASET + ".pkl"))
         scheduler.step(train_loss)
     tw.writer.close()
+    if link_prediction:
+        print('Test metrics at highest val score: AUC {:.4f}, AP {:.4f}'.format(eval_test_auc, eval_test_ap))
+        return eval_test_auc, eval_test_ap
     return max_graph_acc, gc_accs
 
 def negative_sampling(pei, pet, true_triples, num_nodes, count=1):

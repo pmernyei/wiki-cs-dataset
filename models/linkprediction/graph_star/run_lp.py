@@ -12,6 +12,8 @@ from torch_geometric.nn import GAE
 import trainer
 import utils.gsn_argparse as gap
 import load_wiki_data
+import numpy as np
+import seaborn as sns
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
@@ -49,17 +51,37 @@ def load_data(dataset_name):
     return data, num_features
 
 
+def mean_with_uncertainty(values, n_boot=10000, conf_threshold=95):
+    values = np.array(values)
+    avg = values.mean()
+    bootstrap = sns.algorithms.bootstrap(
+        values, func=np.mean, n_boot=n_boot)
+    conf_int = sns.utils.ci(bootstrap, conf_threshold)
+    return avg, np.max(np.abs(conf_int - avg))
+
+
+
 def main(_args):
     args = gap.parser.parse_args(_args)
 
     data, num_features = load_data(args.dataset)
 
-    for i in range(10):
+    aucs = []
+    aps = []
+    for i in range(20):
         print("===========================================")
-        trainer.trainer(args, args.dataset, [data], [data], [data], transductive=True,
+        auc, ap = trainer.trainer(args, args.dataset, [data], [data], [data], transductive=True,
                         num_features=num_features, max_epoch=args.epochs,
                         num_node_class=0,
                         link_prediction=True)
+        aucs.append(auc)
+        aps.append(ap)
+        json.dump(aucs, open('aucs.txt', 'w'))
+        json.dump(aucs, open('aps.txt', 'w'))
+    auc_mean, auc_ci = mean_with_uncertainty(aucs)
+    ap_mean, ap_ci = mean_with_uncertainty(aps)
+    print('AUC-ROC:', auc_mean, '+-', auc_ci)
+    print('AP:',      ap_mean,  '+-', ap_ci)
 
 
 if __name__ == '__main__':
