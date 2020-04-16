@@ -5,7 +5,7 @@ import sys
 import argparse
 import itertools
 
-import node_classification.load_graph_data
+from node_classification import load_graph_data
 
 
 def fit_svm(data, C=200, kernel='rbf', gamma='scale', test=False):
