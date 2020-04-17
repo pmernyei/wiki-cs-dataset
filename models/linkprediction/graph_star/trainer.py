@@ -315,7 +315,7 @@ def trainer(args, DATASET, train_loader, val_loader, test_loader, transductive=F
             max_lp_ap = max(test_lp_ap, max_lp_ap)
             val_lp = (val_lp_ap + val_lp_auc) / 2
             if val_lp > max_val_lp:
-                max_val_lp = max_val_lp
+                max_val_lp = val_lp
                 eval_test_auc = test_lp_auc
                 eval_test_ap = test_lp_ap
 
