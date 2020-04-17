@@ -9,7 +9,8 @@ from utils.gsn_argparse import tab_printer
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from multiprocessing import Process, Queue
 from module.graph_star import GraphStar
-
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
 
 def get_edge_info(data, type):
     attr = "edge_" + type + "_mask"
