@@ -14,6 +14,7 @@ import utils.gsn_argparse as gap
 import load_wiki_data
 import numpy as np
 import seaborn as sns
+import json
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
@@ -68,16 +69,16 @@ def main(_args):
 
     aucs = []
     aps = []
-    for i in range(20):
+    for i in range(10):
         print("===========================================")
         auc, ap = trainer.trainer(args, args.dataset, [data], [data], [data], transductive=True,
                         num_features=num_features, max_epoch=args.epochs,
                         num_node_class=0,
-                        link_prediction=True)
+                        link_prediction=True, test_per_epoch=10, val_per_epoch=10)
         aucs.append(auc)
         aps.append(ap)
         json.dump(aucs, open('aucs.txt', 'w'))
-        json.dump(aucs, open('aps.txt', 'w'))
+        json.dump(aps, open('aps.txt', 'w'))
     auc_mean, auc_ci = mean_with_uncertainty(aucs)
     ap_mean, ap_ci = mean_with_uncertainty(aps)
     print('AUC-ROC:', auc_mean, '+-', auc_ci)
