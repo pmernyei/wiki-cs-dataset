@@ -12,6 +12,7 @@ import json
 import argparse
 
 class VGAE_Encoder(nn.Module):
+    """Two-layer GCN encoder as described in the VGAE paper."""
     def __init__(self, num_features, latent_dim=16):
         super(VGAE_Encoder, self).__init__()
         hidden_layer = 2*latent_dim

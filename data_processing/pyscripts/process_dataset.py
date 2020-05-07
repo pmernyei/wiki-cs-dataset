@@ -1,3 +1,7 @@
+"""
+Subroutines to turn the graph dataset into vectorised form and output JSON
+metadata, specifying data splits and vectorising article text features.
+"""
 import numpy as np
 import json
 import random

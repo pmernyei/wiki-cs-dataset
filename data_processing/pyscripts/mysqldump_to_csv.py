@@ -1,3 +1,7 @@
+"""
+Subroutine for parsing MySQL dumps adapted from
+https://github.com/jamesmishra/mysqldump-to-csv.
+"""
 #!/usr/bin/env python
 import fileinput
 import csv

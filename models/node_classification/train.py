@@ -1,3 +1,9 @@
+"""
+Training and evaluation for semi-supervised node classification.
+Loosely based on https://github.com/dmlc/dgl/blob/master/examples/pytorch/gcn/train.py,
+extended with various additional features for training multiple models, logging
+to tensorboard, training and evaluating with multiple training splits.
+"""
 import argparse, time
 import numpy as np
 import seaborn as sns

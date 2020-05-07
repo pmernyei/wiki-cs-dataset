@@ -1,3 +1,7 @@
+"""
+Calculate the average length of shortest path between two nodes in the given
+graph dataset.
+"""
 import numpy as np
 import json
 import itertools

@@ -32,7 +32,12 @@ public class ImprovedHittingDistanceMinimizer {
 		closestMilestone = new int[transposedGraph.numNodes()];
 		Arrays.fill(closestMilestone, -1);
 	}
-
+	
+	/**
+	* Calculates the nearest marked ancestor of each node in the graph using
+	* breadth-first search from the marked node set.
+	* Uses inputs given to the constructor of the object.
+	*/
 	public int[] compute() {
 		// Sort in ascending order to replicate original behaviour in case of
 		// equal distances

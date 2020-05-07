@@ -1,3 +1,7 @@
+"""
+Training, evaluation and and hyperparameter search for link prediction with
+an SVM.
+"""
 import os
 from torch_geometric.datasets import Planetoid
 from torch_geometric.nn import GAE
