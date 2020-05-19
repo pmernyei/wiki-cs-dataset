@@ -1,4 +1,6 @@
 import argparse
+import json
+import numpy as np
 
 from dgm.dgm import DGM
 from dgm.plotting import *
@@ -22,6 +24,7 @@ parser.add_argument('--eps', help='Edge filtration value for SDGM', type=float, 
 parser.add_argument('--min_component_size', help='Minimum connected component size to be included in the visualisation',
                     type=int, default=0.0)
 parser.add_argument('--dir', help='Directory inside plots where to save the results', default='')
+parser.add_argument('--colours-file', default=None)
 
 
 def train_model(dataset, train_mode, num_classes, device):
@@ -81,8 +84,12 @@ def plot_dgm_graph(args):
 
     print("Filtered Mapper Graph nodes", out_graph.number_of_nodes())
     print("Filtered Mapper Graph edges", out_graph.number_of_edges())
-
-    labeled_colors = color_mnodes_with_labels(res['mnode_to_nodes'], data.y.cpu().numpy(), binary=binary)
+	
+	if args.colours_file is None:
+		labeled_colors = color_mnodes_with_labels(res['mnode_to_nodes'], data.y.cpu().numpy(), binary=binary)
+	else:
+		with open(args.colours_file) as file:
+		labeled_colors = np.array(json.read(file))
     plot_graph(out_graph, node_color=labeled_colors, node_size=res['node_sizes'], edge_weight=res['edge_weight'],
                node_list=res['node_list'], name=name_from_args(args, True), save_dir=args.dir, colorbar=binary)
 
@@ -92,3 +99,4 @@ if __name__ == "__main__":
     np.random.seed(444)
     torch.manual_seed(444)
     plot_dgm_graph(parser.parse_args())
+

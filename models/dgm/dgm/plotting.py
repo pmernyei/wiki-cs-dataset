@@ -20,7 +20,7 @@ def plot_graph(graph, node_color, node_size, edge_weight, node_list, figsize=(12
         cmap = cm.get_cmap(cmap, 100)
         plt.set_cmap(cmap)
     else:
-        plt.set_cmap(cm.Accent)
+        plt.set_cmap(cm.tab10)
 
     # Set figures size
     plt.figure(figsize=figsize)
