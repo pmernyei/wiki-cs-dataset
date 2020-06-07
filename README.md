@@ -42,3 +42,4 @@ Software used
 * The dataset pipeline includes a modified version of the [Wikipedia category sanitizer](https://github.com/corradomonti/wikipedia-categories) by Boldi and Monti for extracting and sanitizing category labels.
 * [`wikiextractor`](https://github.com/attardi/wikiextractor) was used to extract article text data.
 * [`mysqldump-to-csv`](https://github.com/jamesmishra/mysqldump-to-csv) was used for processing hyperlink data.
+* The GCN, GAT and APPNP implementations were taken from the [DGL examples repository](https://github.com/dmlc/dgl/tree/master/examples/pytorch/).
