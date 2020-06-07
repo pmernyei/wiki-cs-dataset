@@ -17,16 +17,20 @@ Experiments
 Our experiments were performed using Python 3.5, CUDA 10.1 and the dependencies noted in `requirements.txt`.
 
 ### Node classification
-For node classification models, run the following, with `#MODEL_NAME#` one of `mlp`, `gcn`, `gat` and `appnp`:
+For node classification models, run the following, with `#MODEL_NAME#` one of `svm`, `mlp`, `gcn`, `gat` and `appnp`:
 ```
 cd experiments
 python -m node_classification.#MODEL_NAME#.#MODEL_NAME#_train --dataset=wiki
 ```
 
-Add the hyperparameters as described in the paper to replicate results. For example:
+Add the hyperparameters as follows to replicate our results:
 ```
 cd experiments
-python -m node_classification.gcn.gcn_train --dataset=wiki --self-loop --n-hidden-units 33 --dropout 0.25 --lr 0.02 --test
+python -m node_classification.svm.svm_train --dataset=wiki --self-loop --kernel rbf --c 8 --test
+python -m node_classification.mlp.mlp_train --dataset=wiki --self-loop --n-hidden-layers 1 --n-hidden-units 35 --dropout 0.35 --lr 0.003 --test
+python -m node_classification.gcn.gcn_train --dataset=wiki --self-loop --n-hidden-layers 1 --n-hidden-units 33 --dropout 0.25 --lr 0.02 --test
+python -m node_classification.gat.gat_train --dataset=wiki --self-loop --n-hidden-layers 1 --n-hidden-units 14 --in-drop 0.5 --attn-drop 0.5 --n-heads 5 --lr 0.007 --test
+python -m node_classification.appnp.appnp_train --dataset=wiki --self-loop --n-hidden-units 14 --k 2 --alpha 0.11 --in-drop 0.4 --edge-drop 0.4 --lr 0.02 --test
 ```
 
 ### Link prediction

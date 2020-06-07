@@ -8,11 +8,11 @@ from .gat import GAT
 
 
 def gat_model_fn(args, data):
-    heads = ([args.num_heads] * args.n_layers) + [args.num_out_heads]
+    heads = ([args.n_heads] * args.n_layers) + [args.n_out_heads]
     return GAT(data.graph,
                 args.n_hidden_layers,
                 data.n_feats,
-                args.n_hidden,
+                args.n_hidden_units,
                 data.n_classes,
                 heads,
                 F.elu,
@@ -23,13 +23,13 @@ def gat_model_fn(args, data):
 
 
 def register_gat_args(parser):
-    parser.add_argument("--n-hidden", type=int, default=16,
+    parser.add_argument("--n-hidden-units", type=int, default=16,
             help="number of hidden gcn units")
     parser.add_argument("--n-hidden-layers", type=int, default=1,
             help="number of hidden gat layers")
-    parser.add_argument("--num-heads", type=int, default=8,
+    parser.add_argument("--n-heads", type=int, default=8,
                         help="number of hidden attention heads")
-    parser.add_argument("--num-out-heads", type=int, default=1,
+    parser.add_argument("--n-out-heads", type=int, default=1,
                         help="number of output attention heads")
     parser.add_argument("--in-drop", type=float, default=.6,
                         help="input feature dropout")

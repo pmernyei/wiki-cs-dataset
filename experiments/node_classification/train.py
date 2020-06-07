@@ -312,7 +312,7 @@ def register_general_args(parser):
             help='ID of first train split to evaluate with')
     parser.add_argument('--output-dir',
                         help='Directory to write Tensorboard logs and eval '
-                             'results to', default='./')
+                             'results to', default='./eval-output/')
     parser.add_argument('--embedding-log-freq', type=int, default=40,
             help='how many epochs between writing embeddings to tensorboard')
     parser.add_argument('--output-preds', action='store_true',
