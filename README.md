@@ -26,7 +26,7 @@ python -m node_classification.#MODEL_NAME#.#MODEL_NAME#_train --dataset=wiki
 Add the hyperparameters as described in the paper to replicate results. For example:
 ```
 cd experiments
-python -m node_classification.gcn.train_gcn --dataset=wiki --self-loop --n-hidden-units 33 --dropout 0.25 --lr 0.02 --test
+python -m node_classification.gcn.gcn_train --dataset=wiki --self-loop --n-hidden-units 33 --dropout 0.25 --lr 0.02 --test
 ```
 
 ### Link prediction
