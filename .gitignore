@@ -1,7 +1,8 @@
+./env
+
 # large input/intermediate data files
 data_processing/pipeline_data/
 
 # python scripts
-models/env
-models/tmp
+experiments/tmp
 __pycache__/
