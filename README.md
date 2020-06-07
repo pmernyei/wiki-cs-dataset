@@ -32,7 +32,7 @@ python -m node_classification.gcn.train_gcn --dataset=wiki --self-loop --n-hidde
 ### Link prediction
 The SVM and VGAE benchmarks for link prediction are included in this repository:
 ```
-cd experimeents/linkprediction
+cd experiments/linkprediction
 python train_vgae.py --dataset=wiki --test
 python train_svm.py --dataset=wiki --c=10 --test
 ```
