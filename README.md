@@ -16,7 +16,7 @@ Experiments
 -----------
 Our experiments were performed using Python 3.5, CUDA 10.1 and the dependencies noted in `requirements.txt`.
 
-## Node classification
+### Node classification
 For node classification models, run the following, with `#MODEL_NAME#` one of `mlp`, `gcn`, `gat` and `appnp`:
 ```
 cd experiments
@@ -29,7 +29,7 @@ cd experiments
 python -m node_classification.gcn.train_gcn --dataset=wiki --self-loop --n-hidden-units 33 --dropout 0.25 --lr 0.02 --test
 ```
 
-## Link prediction
+### Link prediction
 The SVM and VGAE benchmarks for link prediction are included in this repository:
 ```
 cd experimeents/linkprediction
