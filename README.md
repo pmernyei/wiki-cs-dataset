@@ -1,4 +1,4 @@
-Wiki-CS
+Wiki-CS: A Wikipedia-Based Benchmark for Graph Neural Networks
 =======
 
 Wiki-CS is a Wikipedia-based dataset for benchmarking Graph Neural Networks. This repository contains the dataset files, the data pipeline used to create it as well as experiments performed to benchmark node classification and link prediction methods.
