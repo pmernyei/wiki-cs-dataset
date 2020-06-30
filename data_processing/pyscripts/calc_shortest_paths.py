@@ -21,7 +21,7 @@ def load_builtin(args):
     graph = dgl.data.load_data(args).graph
     return graph
 
-def load_wiki(path=os.path.join('..','..','results','dataset','vectors.json')):
+def load_wiki(path=os.path.join('..','..','dataset','data.json')):
     global graph
     data = json.load(open(path))
     edge_list = list(itertools.chain(*[[(i, nb) for nb in nbs] for i,nbs in enumerate(data['links'])]))
