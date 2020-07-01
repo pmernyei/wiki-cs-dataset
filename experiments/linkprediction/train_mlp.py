@@ -131,7 +131,7 @@ if __name__ == '__main__':
     train_loader = make_loader(x_tr, y_tr)
     aucs = []
     aps = []
-    for _ in range(runs):
+    for _ in range(args.runs):
         model = make_mlp(args.hidden_layers, args.hidden_units, args.dropout).to(device)
         optimizer = torch.optim.Adam(model.parameters(), lr=args.lr,
             weight_decay=args.weight_decay)
