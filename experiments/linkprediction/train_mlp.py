@@ -25,6 +25,7 @@ def make_mlp(hidden_layers, hidden_size, dropout=0.5, in_dim=600):
         if dropout > 0:
             layers.append(nn.Dropout(p=dropout))
     layers.append(nn.Linear(hidden_size, 1))
+    layers.append(nn.Sigmoid())
     return nn.Sequential(*layers)
 
 
@@ -35,19 +36,21 @@ def make_loader(x,y,batch_size=64):
 
 def train(model, loader, optimizer):
     model.train()
+    losses = []
     for x,y in loader:
         optimizer.zero_grad()
         preds = model(x)
-        loss = F.binary_corss_entropy(preds, y)
+        loss = F.binary_cronanss_entropy(preds, y)
         loss.backward()
         optimizer.step()
-
+        losses.append(loss.item())
+    return mean(losses)
 
 def eval(model,x,y):
     model.eval()
-    preds = model(x)
-    auc = roc_auc_score(y, preds)
-    ap = average_precision_score(y, preds)
+    preds = model(x).detach().cpu()
+    auc = roc_auc_score(y.cpu(), preds)
+    ap = average_precision_score(y.cpu(), preds)
     return auc,ap
 
 
@@ -62,7 +65,7 @@ def sample_negative(count, nodes, avoid):
                 result = np.concatenate((result, [[u],[v]]), axis=1)
             if result.shape[1] == count:
                 break
-    return torch.Tensor(result)
+    return torch.LongTensor(result)
 
 
 def combine_node_pair_features(features, pos_edge_index, neg_edge_index):
@@ -103,9 +106,7 @@ def load_data(dataset_name, device):
     x_tr = x_tr.to(device)
     y_tr = y_tr.to(device)
     x_val = x_val.to(device)
-    y_val = y_val.to(device)
     x_test = x_test.to(device)
-    y_test = y_test.to(device)
     return x_tr, y_tr, x_val, y_val, x_test, y_test
 
 
@@ -133,9 +134,10 @@ if __name__ == '__main__':
     test_auc = 0
     test_ap = 0
     for epoch in range(args.epochs):
-        train(model, train_loader, optimizer)
+        loss = train(model, train_loader, optimizer)
+        tr_auc, tr_ap = eval(mode, x_tr[:10000], y_tr[:10000])
         val_auc, val_ap = eval(model, x_val, y_val)
-        print('Epoch {:03d}, val AUC {:.6f}, val AP {:.6f}'.format(epoch, val_auc, val_ap))
+        print('Epoch {:03d}, loss {:.6f}, tr AUC {:.4f}, tr AP {:.4f}, val AUC {:.4f}, val AP {:.4f}'.format(epoch, loss, tr_auc, tr_ap, val_auc, val_ap))
         if args.test and val_ap + val_auc > best_val:
             best_val = val_ap + val_auc
             test_auc, test_ap = eval(mode, x_test, y_test)
