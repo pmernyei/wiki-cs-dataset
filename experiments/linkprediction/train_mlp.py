@@ -145,7 +145,7 @@ if __name__ == '__main__':
             print('Epoch {:03d}, loss {:.6f}, tr AUC {:.4f}, tr AP {:.4f}, val AUC {:.4f}, val AP {:.4f}'.format(epoch, loss, tr_auc, tr_ap, val_auc, val_ap))
             if args.test and val_ap + val_auc > best_val:
                 best_val = val_ap + val_auc
-                test_auc, test_ap = eval(mode, x_test, y_test)
+                test_auc, test_ap = eval(model, x_test, y_test)
                 print('test AUC {:.6f}, test AP {:.6f}'.format(test_auc, test_ap))
 
         if args.test:
