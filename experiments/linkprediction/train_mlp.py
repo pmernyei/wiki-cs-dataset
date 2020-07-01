@@ -40,7 +40,7 @@ def train(model, loader, optimizer):
     for x,y in loader:
         optimizer.zero_grad()
         preds = model(x)
-        loss = F.binary_cronanss_entropy(preds, y)
+        loss = F.binary_cross_entropy(preds, y)
         loss.backward()
         optimizer.step()
         losses.append(loss.item())
