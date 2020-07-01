@@ -15,6 +15,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
+from train_vgae import mean_with_uncertainty
 
 def make_mlp(hidden_layers, hidden_size, dropout=0.5, in_dim=600):
     layers = []
@@ -122,26 +123,41 @@ if __name__ == '__main__':
     parser.add_argument('--hidden-units', type=int, default=32)
     parser.add_argument('--dropout', type=float, default=0.5)
     parser.add_argument('--epochs', type=int, default=300)
+    parser.add_argument('--runs', type=int, default=20)
     parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--weight-decay', type=float, default=5e-4)
     args = parser.parse_args()
     x_tr, y_tr, x_val, y_val, x_test, y_test = load_data(args.dataset, device)
     train_loader = make_loader(x_tr, y_tr)
-    model = make_mlp(args.hidden_layers, args.hidden_units, args.dropout).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr,
-        weight_decay=args.weight_decay)
-    best_val = 0
-    test_auc = 0
-    test_ap = 0
-    for epoch in range(args.epochs):
-        loss = train(model, train_loader, optimizer)
-        tr_auc, tr_ap = eval(model, x_tr, y_tr)
-        val_auc, val_ap = eval(model, x_val, y_val)
-        print('Epoch {:03d}, loss {:.6f}, tr AUC {:.4f}, tr AP {:.4f}, val AUC {:.4f}, val AP {:.4f}'.format(epoch, loss, tr_auc, tr_ap, val_auc, val_ap))
-        if args.test and val_ap + val_auc > best_val:
-            best_val = val_ap + val_auc
-            test_auc, test_ap = eval(mode, x_test, y_test)
-            print('test AUC {:.6f}, test AP {:.6f}'.format(test_auc, test_ap))
+    aucs = []
+    aps = []
+    for _ in range(runs):
+        model = make_mlp(args.hidden_layers, args.hidden_units, args.dropout).to(device)
+        optimizer = torch.optim.Adam(model.parameters(), lr=args.lr,
+            weight_decay=args.weight_decay)
+        best_val = 0
+        test_auc = 0
+        test_ap = 0
+        for epoch in range(args.epochs):
+            loss = train(model, train_loader, optimizer)
+            tr_auc, tr_ap = eval(model, x_tr, y_tr)
+            val_auc, val_ap = eval(model, x_val, y_val)
+            print('Epoch {:03d}, loss {:.6f}, tr AUC {:.4f}, tr AP {:.4f}, val AUC {:.4f}, val AP {:.4f}'.format(epoch, loss, tr_auc, tr_ap, val_auc, val_ap))
+            if args.test and val_ap + val_auc > best_val:
+                best_val = val_ap + val_auc
+                test_auc, test_ap = eval(mode, x_test, y_test)
+                print('test AUC {:.6f}, test AP {:.6f}'.format(test_auc, test_ap))
 
-    if args.test:
-        print('Final test AUC {:.6f}, test AP {:.6f}'.format(test_auc, test_ap))
+        if args.test:
+            print('Final test AUC {:.6f}, test AP {:.6f}'.format(test_auc, test_ap))
+            aucs.append(test_auc)
+            aps.append(test_ap)
+        else:
+            aucs.append(val_auc)
+            aps.append(val_ap)
+        json.dump(aucs, open('aucs.txt', 'w'))
+        json.dump(aucs, open('aps.txt', 'w'))
+        auc_mean, auc_ci = mean_with_uncertainty(aucs)
+        ap_mean, ap_ci = mean_with_uncertainty(aps)
+        print('AUC-ROC:', auc_mean, '+-', auc_ci)
+        print('AP:',      ap_mean,  '+-', ap_ci)
