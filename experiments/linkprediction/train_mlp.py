@@ -135,7 +135,7 @@ if __name__ == '__main__':
     test_ap = 0
     for epoch in range(args.epochs):
         loss = train(model, train_loader, optimizer)
-        tr_auc, tr_ap = eval(model, x_tr[:10000], y_tr[:10000])
+        tr_auc, tr_ap = eval(model, x_tr, y_tr)
         val_auc, val_ap = eval(model, x_val, y_val)
         print('Epoch {:03d}, loss {:.6f}, tr AUC {:.4f}, tr AP {:.4f}, val AUC {:.4f}, val AP {:.4f}'.format(epoch, loss, tr_auc, tr_ap, val_auc, val_ap))
         if args.test and val_ap + val_auc > best_val:
