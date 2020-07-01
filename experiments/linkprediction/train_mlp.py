@@ -39,16 +39,16 @@ def train(model, loader, optimizer):
     losses = []
     for x,y in loader:
         optimizer.zero_grad()
-        preds = model(x)
+        preds = model(x).view(-1)
         loss = F.binary_cross_entropy(preds, y)
         loss.backward()
         optimizer.step()
         losses.append(loss.item())
-    return mean(losses)
+    return np.mean(losses)
 
 def eval(model,x,y):
     model.eval()
-    preds = model(x).detach().cpu()
+    preds = model(x).view(-1).detach().cpu()
     auc = roc_auc_score(y.cpu(), preds)
     ap = average_precision_score(y.cpu(), preds)
     return auc,ap
