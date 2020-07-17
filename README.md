@@ -7,7 +7,7 @@ The dataset
 -----------
 
 ### Loading via PyTorch Geometric
-You can load the dataset easily using the [`torch_geometric.datasets.WikiCS`](https://pytorch-geometric.readthedocs.io/en/latest/_modules/torch_geometric/datasets/wikics.html#WikiCS) class in PyTorch Geometric. Note that the `train_mask`, `val_mask`, `stopping_mask` fields are matrices with rows corresponding to 20 different dataset splits, please average over all of them for evaluation. (The `test_mask` has a single version.)
+You can load the dataset easily using the [`torch_geometric.datasets.WikiCS`](https://pytorch-geometric.readthedocs.io/en/latest/_modules/torch_geometric/datasets/wikics.html#WikiCS) class in PyTorch Geometric. Note that the `train_mask`, `val_mask`, `stopping_mask` fields are matrices with rows corresponding to 20 different dataset splits, please use all of them for and report averaged results for standardised evaluation. (The `test_mask` has a single version.)
 
 ### Loading from file
 The `dataset/data.json` file contains the vectorised representation of the dataset. It includes the node features, adjacency lists, labels and dataset splits. Note that we provide 20 different training splits to avoid overfitting to a specific small set of training nodes for semi-supervised node classification. See our paper for more details.
