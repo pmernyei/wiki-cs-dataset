@@ -6,6 +6,10 @@ Wiki-CS is a Wikipedia-based dataset for benchmarking Graph Neural Networks. Thi
 The dataset
 -----------
 
+### Loading via PyTorch Geometric
+You can load the dataset easily using the [`torch_geometric.datasets.WikiCS` class](https://pytorch-geometric.readthedocs.io/en/latest/_modules/torch_geometric/datasets/wikics.html#WikiCS) in PyTorch Geometric. Note that the `train_mask`, `val_mask`, `stopping_mask` fields are matrices with rows corresponding to 20 different dataset splits, please average over all of them for evaluation. (The `test_mask` has a single version.)
+
+### Loading from file
 The `dataset/data.json` file contains the vectorised representation of the dataset. It includes the node features, adjacency lists, labels and dataset splits. Note that we provide 20 different training splits to avoid overfitting to a specific small set of training nodes for semi-supervised node classification. See our paper for more details.
 
 See `experiments/linkprediction/load_wiki.py` and `experiments/node_classification/load_graph_data.py` for reference data loaders in PyTorch Geometric and DGL, respectively.
@@ -39,6 +43,18 @@ The SVM and VGAE benchmarks for link prediction are included in this repository:
 cd experiments/linkprediction
 python train_vgae.py --dataset=wiki --test
 python train_svm.py --dataset=wiki --c=10 --test
+```
+
+Citing
+-----
+If you use our dataset, please cite our paper (Bibtex below).
+```
+@article{mernyei2020wiki,
+  title={Wiki-CS: A Wikipedia-Based Benchmark for Graph Neural Networks},
+  author={Mernyei, P{\'e}ter and Cangea, C{\u{a}}t{\u{a}}lina},
+  journal={arXiv preprint arXiv:2007.02901},
+  year={2020}
+}
 ```
 
 Software used
