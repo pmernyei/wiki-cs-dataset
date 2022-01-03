@@ -7,7 +7,7 @@ from torch_geometric.data.data import Data
 
 DATA_PATH = os.path.join('..', '..', 'dataset', 'data.json')
 
-def load_data(filename=DATA_PATH):
+def load_data(filename=DATA_PATH, directed=False):
     raw = json.load(open(filename))
     features = torch.FloatTensor(np.array(raw['features']))
     labels = torch.LongTensor(np.array(raw['labels']))
@@ -22,11 +22,17 @@ def load_data(filename=DATA_PATH):
         stopping_masks = [torch.ByteTensor(st) for st in raw['stopping_masks']]
         test_mask = torch.ByteTensor(raw['test_mask'])
 
-    edge_list = list(itertools.chain(*[[(i, nb) for nb in nbs]
-                    for i,nbs in enumerate(raw['links'])]))
-    src, dst = tuple(zip(*edge_list))
-    edges = torch.LongTensor([src, dst])
-    data = Data(x=features, edge_index=edges, y=labels)
+    if directed:
+        edges = [[(i, j) for j in js] for i, js in enumerate(raw['links'])]
+        edges = list(itertools.chain(*edges))
+    else:
+        edges = [[(i, j) for j in js] + [(j, i) for j in js]
+                 for i, js in enumerate(raw['links'])]
+        edges = list(set(itertools.chain(*edges)))
+
+    edge_index = torch.tensor(edges, dtype=torch.long).t().contiguous()
+
+    data = Data(x=features, edge_index=edge_index, y=labels)
 
     data.train_masks = train_masks
     data.val_masks = val_masks

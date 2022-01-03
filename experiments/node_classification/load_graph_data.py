@@ -3,9 +3,8 @@ import json
 import itertools
 import torch
 import networkx as nx
-import dgl.data
+import dgl
 import os.path
-from dgl import DGLGraph
 
 DATA_PATH = os.path.join('..', '..', 'dataset', 'data.json')
 
@@ -24,7 +23,7 @@ class NodeClassificationDataset:
         self.n_feats = n_feats
 
 
-def from_file(filename):
+def from_file(filename, self_loop):
     data = json.load(open(filename))
     features = torch.FloatTensor(np.array(data['features']))
     labels = torch.LongTensor(np.array(data['labels']))
@@ -41,7 +40,7 @@ def from_file(filename):
     n_feats = features.shape[1]
     n_classes = len(set(data['labels']))
 
-    g = DGLGraph()
+    g = dgl.DGLGraph()
     g.add_nodes(len(data['features']))
     edge_list = list(itertools.chain(*[[(i, nb) for nb in nbs] for i,nbs in enumerate(data['links'])]))
     n_edges = len(edge_list)
@@ -50,6 +49,9 @@ def from_file(filename):
     g.add_edges(src, dst)
     # edges are directional in DGL; make them bi-directional
     g.add_edges(dst, src)
+    if self_loop:
+        g = dgl.remove_self_loop(g)
+        g = dgl.add_self_loop(g)
     return NodeClassificationDataset(g, features, labels, train_masks, stopping_masks,
                                     val_masks, test_mask, n_edges, n_classes, n_feats)
 
@@ -81,14 +83,14 @@ def from_builtin(args):
     if args.self_loop:
         g.remove_edges_from(nx.selfloop_edges(g))
         g.add_edges_from(zip(g.nodes(), g.nodes()))
-    g = DGLGraph(g)
+    g = dgl.DGLGraph(g)
     return NodeClassificationDataset(g, features, labels, train_masks, stopping_masks,
                                     val_masks, test_mask, n_edges, n_classes, n_feats)
 
 
 def load(args):
     if args.dataset == 'wiki':
-        data = from_file(DATA_PATH)
+        data = from_file(DATA_PATH, args.self_loop)
     else:
         data = from_builtin(args)
 
